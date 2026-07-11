@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
-import { seedWorkouts, seedWeights, seedGear, seedProfile } from '../lib/seed'
+import { seedWorkouts, seedWeights, seedGear, blankProfile } from '../lib/seed'
 import {
   calorieBudget, macroTargets, computeStreak, longestStreak, todayISO, isoDay, bmi,
 } from '../lib/calc'
@@ -14,22 +14,41 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 
 // Each collection is shaped like a future Supabase table row (id, user_id, date, ...)
 // so migrating from localStorage to Postgres is a mapping exercise, not a rewrite.
+//
+// New accounts start completely EMPTY. No fake workouts, no fake weigh-ins, no fake
+// gear. A first skate should be the user's first skate. Sample data is opt-in only,
+// from Profile → Load sample data.
 function emptyState(email) {
   return {
-    version: 1,
-    profile: seedProfile(email),
-    workouts: seedWorkouts(),
+    version: 2,
+    profile: blankProfile(email),
+    workouts: [],    // { id, date, kind, typeId, name, minutes, miles, avgSpeed, topSpeed, elevation, calories, laps, route }
     meals: [],       // { id, date, slot, name, calories, protein, carbs, fat, fiber, sugar, sodium }
     water: {},       // { 'YYYY-MM-DD': ounces }
-    weights: seedWeights(),
+    weights: [],     // { id, date, weightLb, bodyFat, waist, hip, chest }
     photos: [],      // { id, date, view, dataUrl }
     savedMeals: [],  // { id, name, items: [] }
     favorites: [],   // food ids
-    gear: seedGear(),
+    gear: [],        // { id, cat, name, purchased, lifeMiles, maintenance: [] }
     favoriteRoutes: [], // { id, name, cat }
     program: { activeId: null, startedAt: null, completed: [], doneDays: [] },
-    challenges: { joined: ['w-15mi', 'm-100mi'] },
+    challenges: { joined: [] },
     unlocked: [],
+    isSample: false,
+  }
+}
+
+// Opt-in demo dataset, clearly labeled in the UI so it's never mistaken for real history.
+function sampleState(email) {
+  const profile = { ...blankProfile(email), weightLb: 192, startWeightLb: 202, goalWeightLb: 175 }
+  return {
+    ...emptyState(email),
+    profile,
+    workouts: seedWorkouts(profile.weightLb),
+    weights: seedWeights(202, 192),
+    gear: seedGear(),
+    challenges: { joined: ['w-15mi', 'm-100mi'] },
+    isSample: true,
   }
 }
 
@@ -79,10 +98,17 @@ export function DataProvider({ children }) {
     addWeight: (entry) => update((s) => {
       const date = entry.date || todayISO()
       const rest = s.weights.filter((w) => w.date !== date)
+      const weights = [...rest, { id: uid(), ...entry, date }].sort((a, b) => a.date.localeCompare(b.date))
       return {
         ...s,
-        weights: [...rest, { id: uid(), ...entry, date }].sort((a, b) => a.date.localeCompare(b.date)),
-        profile: { ...s.profile, weightLb: entry.weightLb ?? s.profile.weightLb },
+        weights,
+        profile: {
+          ...s.profile,
+          weightLb: entry.weightLb ?? s.profile.weightLb,
+          // The very first weigh-in becomes the starting weight — that's the line
+          // everything else is measured from.
+          startWeightLb: s.profile.startWeightLb ?? weights[0].weightLb,
+        },
       }
     }),
     deleteWeight: (id) => update((s) => ({ ...s, weights: s.weights.filter((w) => w.id !== id) })),
@@ -140,7 +166,8 @@ export function DataProvider({ children }) {
       },
     })),
 
-    resetAll: () => setState(emptyState(user?.email)),
+    loadSampleData: () => setState(sampleState(user?.email)),
+    clearAll: () => setState(emptyState(user?.email)),
   }), [update, user])
 
   const derived = useMemo(() => (state ? computeDerived(state) : null), [state])
@@ -189,15 +216,19 @@ function computeDerived(s) {
   const weekWorkouts = s.workouts.filter((w) => w.date >= wk)
   const monthWorkouts = s.workouts.filter((w) => w.date >= mo)
 
+  // Weight is entirely optional. With zero weigh-ins every number here stays 0 or null —
+  // never NaN, never Infinity, never a divide-by-zero.
   const weights = [...s.weights].sort((a, b) => a.date.localeCompare(b.date))
-  const currentWeight = weights.length ? weights[weights.length - 1].weightLb : s.profile.weightLb
-  const startWeight = s.profile.startWeightLb || (weights[0]?.weightLb ?? currentWeight)
-  const lbsLost = Math.max(0, startWeight - currentWeight)
-  const goalTotal = Math.max(1, startWeight - (s.profile.goalWeightLb || startWeight))
-  const goalPct = Math.min(100, Math.round((lbsLost / goalTotal) * 100))
+  const hasWeights = weights.length > 0
+  const currentWeight = hasWeights ? weights[weights.length - 1].weightLb : null
+  const startWeight = hasWeights ? (s.profile.startWeightLb ?? weights[0].weightLb) : null
+  const goalWeight = s.profile.goalWeightLb ?? null
+  const lbsLost = hasWeights ? Math.max(0, startWeight - currentWeight) : 0
+  const goalTotal = hasWeights && goalWeight ? Math.max(1, startWeight - goalWeight) : 0
+  const goalPct = goalTotal > 0 ? Math.min(100, Math.round((lbsLost / goalTotal) * 100)) : 0
   const weeksTracked = Math.max(1, weights.length - 1)
-  const avgWeeklyLoss = +(((startWeight - currentWeight) / weeksTracked)).toFixed(2)
-  const lastWeek = weights.length > 1 ? weights[weights.length - 2].weightLb - currentWeight : 0
+  const avgWeeklyLoss = weights.length > 1 ? +((startWeight - currentWeight) / weeksTracked).toFixed(2) : 0
+  const lastWeek = weights.length > 1 ? +(weights[weights.length - 2].weightLb - currentWeight).toFixed(1) : 0
 
   const prs = {
     longestDistance: Math.max(0, ...skates.map((w) => w.miles || 0)),
@@ -265,10 +296,21 @@ function computeDerived(s) {
     remaining: budget.target - consumed + burned,
     activeMinutesToday, milesToday,
     waterToday: s.water[today] || 0,
-    weights, currentWeight, startWeight, lbsLost, goalPct, avgWeeklyLoss, lastWeek,
-    bmiValue: bmi(currentWeight, s.profile.heightIn),
+    weights, hasWeights, currentWeight, startWeight, goalWeight, lbsLost, goalPct, avgWeeklyLoss, lastWeek,
+    bmiValue: hasWeights ? bmi(currentWeight, s.profile.heightIn) : null,
     prs, routes, metrics, unlocked, gear, activeProgram,
     activeDaysSet: new Set(activeDays),
     avgPace: totalMiles > 0 ? totalMinutes / totalMiles : 0,
+
+    // First-run flags. Every surface uses these to decide between an empty state
+    // and real content, so nothing ever renders a lonely "0.0" and calls it a dashboard.
+    hasWorkouts: s.workouts.length > 0,
+    hasSkates: skates.length > 0,
+    hasMeals: s.meals.length > 0,
+    hasMealsToday: todayMeals.length > 0,
+    hasGear: s.gear.length > 0,
+    hasPhotos: s.photos.length > 0,
+    hasRoutes: routes.length > 0,
+    isBrandNew: s.workouts.length === 0 && s.weights.length === 0 && s.meals.length === 0 && s.gear.length === 0,
   }
 }
