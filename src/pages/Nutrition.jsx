@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
+import Icon from '../components/icons'
 import { FOODS, RESTAURANTS, MEAL_SLOTS } from '../lib/foods'
 import { todayISO } from '../lib/calc'
 
@@ -19,7 +20,7 @@ export default function Nutrition() {
           <h1 className="h-title">Fuel</h1>
           <p className="text-sm text-slate-500 mt-1">Eat like someone training for a long skate, not someone on a diet.</p>
         </div>
-        <button onClick={() => setScanner(true)} className="btn-ghost !px-3 shrink-0">📷 Scan</button>
+        <button onClick={() => setScanner(true)} className="btn-ghost !px-3 shrink-0"><Icon name="barcode_scanner" size={17} /> Scan</button>
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
@@ -38,12 +39,12 @@ export default function Nutrition() {
       {tab === 'Saved' && <SavedTab />}
       {tab === 'History' && <HistoryTab />}
 
-      <Modal open={scanner} onClose={() => setScanner(false)} title="📷 Barcode Scanner">
+      <Modal open={scanner} onClose={() => setScanner(false)} title={<><Icon name="barcode_scanner" size={19} className="mr-1.5 text-volt-400" />Barcode Scanner</>}>
         <div className="space-y-4">
           <div className="relative grid place-items-center h-48 rounded-xl bg-ink-900 border border-white/10 overflow-hidden">
             <div className="absolute inset-x-8 h-0.5 bg-ember-500 shadow-[0_0_12px_2px_rgba(242,87,27,0.6)] live-dot" />
             <div className="absolute inset-6 border-2 border-white/20 rounded-lg" />
-            <span className="text-4xl opacity-30">▥</span>
+            <span className="opacity-30"><Icon name="barcode_scanner" size={40} /></span>
           </div>
           <p className="text-sm text-slate-400">
             Camera scanning is stubbed in this build — it needs a barcode-decoding library and a
@@ -68,7 +69,7 @@ function TodayTab() {
     <div className="space-y-4">
       {!d.hasMeals && (
         <Card className="border-volt-500/30 bg-volt-500/[0.04] text-center py-7">
-          <div className="text-4xl mb-2.5">🍎</div>
+          <div className="mb-2.5 text-volt-400"><Icon name="nutrition" size={40} /></div>
           <div className="font-display font-bold text-white text-lg">Log your first meal</div>
           <div className="text-sm text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
             Search a food, pick a restaurant dish, or build a recipe. Skate does the macro math and
@@ -93,7 +94,7 @@ function TodayTab() {
       </Card>
 
       <Card>
-        <SectionTitle>💧 Water Intake</SectionTitle>
+        <SectionTitle><Icon name="water_drop" size={15} className="mr-1.5 text-surge-400" />Water Intake</SectionTitle>
         <div className="flex items-center gap-4">
           <div className="font-display text-3xl font-bold text-surge-400 tabular-nums">{d.waterToday}<span className="text-base text-slate-500 ml-1">oz</span></div>
           <div className="flex-1">
@@ -187,7 +188,7 @@ function AddFoodModal({ food, onClose }) {
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost !px-3" onClick={() => toggleFavorite(food.id)}>
-            {favorites.includes(food.id) ? '★' : '☆'}
+            <Icon name={favorites.includes(food.id) ? 'star_filled' : 'star'} size={18} className={favorites.includes(food.id) ? 'text-volt-400' : ''} />
           </button>
           <button
             className="btn-primary flex-1"
@@ -223,7 +224,7 @@ function SearchTab() {
       <input className="input" placeholder="Search foods…" value={q} onChange={(e) => setQ(e.target.value)} />
       {!q && favs.length > 0 && (
         <Card>
-          <SectionTitle>★ Favorite Foods</SectionTitle>
+          <SectionTitle><Icon name="star_filled" size={15} className="mr-1.5 text-volt-400" />Favorite Foods</SectionTitle>
           <FoodList foods={favs} onPick={setPick} />
         </Card>
       )}
@@ -262,7 +263,7 @@ function RestaurantTab() {
     <div className="space-y-3">
       {RESTAURANTS.map((r) => (
         <Card key={r.id}>
-          <SectionTitle>{r.emoji} {r.name}</SectionTitle>
+          <SectionTitle><Icon name={r.icon} size={15} className="mr-1.5" />{r.name}</SectionTitle>
           <FoodList foods={r.items.map((i) => ({ ...i, brand: r.name }))} onPick={setPick} />
         </Card>
       ))}
@@ -284,7 +285,7 @@ function RecipeTab() {
 
   return (
     <Card>
-      <SectionTitle>🥣 Recipe Builder</SectionTitle>
+      <SectionTitle><Icon name="menu_book" size={15} className="mr-1.5" />Recipe Builder</SectionTitle>
       <div className="space-y-3">
         <input className="input" placeholder="Recipe name (e.g. Post-skate bowl)" value={name} onChange={(e) => setName(e.target.value)} />
         <input className="input" placeholder="Add an ingredient…" value={q} onChange={(e) => setQ(e.target.value)} />

@@ -4,7 +4,7 @@ export const SKATE_TYPES = [
   {
     id: 'outdoor-fitness',
     name: 'Outdoor Fitness',
-    emoji: '🛼',
+    icon: 'roller_skating',
     blurb: 'Steady aerobic session. The bread and butter.',
     met: 9.5,
     color: 'volt',
@@ -14,7 +14,7 @@ export const SKATE_TYPES = [
   {
     id: 'trail',
     name: 'Trail',
-    emoji: '🌲',
+    icon: 'forest',
     blurb: 'Long paths, greenways, rail trails.',
     met: 9.0,
     color: 'volt',
@@ -24,7 +24,7 @@ export const SKATE_TYPES = [
   {
     id: 'urban',
     name: 'Urban',
-    emoji: '🏙️',
+    icon: 'location_city',
     blurb: 'Stop-and-go city skating, curbs and crosswalks.',
     met: 8.0,
     color: 'surge',
@@ -34,7 +34,7 @@ export const SKATE_TYPES = [
   {
     id: 'speed',
     name: 'Speed Training',
-    emoji: '⚡',
+    icon: 'bolt',
     blurb: 'Intervals and tempo work. High output.',
     met: 12.5,
     color: 'ember',
@@ -44,7 +44,7 @@ export const SKATE_TYPES = [
   {
     id: 'aggressive',
     name: 'Aggressive',
-    emoji: '🤘',
+    icon: 'skateboarding',
     blurb: 'Park and street. Grinds, airs, bruises.',
     met: 10.0,
     color: 'ember',
@@ -54,7 +54,7 @@ export const SKATE_TYPES = [
   {
     id: 'hockey',
     name: 'Hockey Practice',
-    emoji: '🏒',
+    icon: 'sports_hockey',
     blurb: 'Drills, scrimmage, sprints, stops.',
     met: 11.0,
     color: 'surge',
@@ -64,7 +64,7 @@ export const SKATE_TYPES = [
   {
     id: 'freestyle',
     name: 'Freestyle',
-    emoji: '🎯',
+    icon: 'target',
     blurb: 'Slalom, cones, footwork, control.',
     met: 7.0,
     color: 'surge',
@@ -74,7 +74,7 @@ export const SKATE_TYPES = [
   {
     id: 'commute',
     name: 'Commute',
-    emoji: '🎒',
+    icon: 'backpack',
     blurb: 'Getting somewhere. Movement that counts.',
     met: 8.5,
     color: 'volt',
@@ -84,7 +84,7 @@ export const SKATE_TYPES = [
   {
     id: 'recovery',
     name: 'Recovery',
-    emoji: '🌿',
+    icon: 'eco',
     blurb: 'Easy roll. Keeps the streak, spares the legs.',
     met: 5.5,
     color: 'surge',

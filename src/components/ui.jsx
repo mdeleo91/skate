@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import Icon from './icons'
 
 export function Card({ className = '', children, ...rest }) {
   return <div className={`card ${className}`} {...rest}>{children}</div>
@@ -120,10 +121,10 @@ export function RouteMap({ points, height = 160, color = '#A3F015' }) {
 
 // The first thing a new user sees on most screens. It should feel like an invitation,
 // not an error message — no "no data found", no empty tables, no shame.
-export function EmptyState({ emoji = '🛼', title, desc, cta, to, onClick, hint, children }) {
+export function EmptyState({ icon = 'roller_skating', title, desc, cta, to, onClick, hint, children }) {
   return (
     <div className="card text-center py-10 px-5">
-      <div className="text-4xl mb-3">{emoji}</div>
+      <div className="mb-3 text-volt-400"><Icon name={icon} size={44} /></div>
       <div className="font-display font-bold text-white text-lg">{title}</div>
       {desc && <div className="text-sm text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">{desc}</div>}
       {cta && to && <Link to={to} className="btn-primary mt-5 inline-flex">{cta}</Link>}

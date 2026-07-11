@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { SKATE_TYPES } from '../lib/skateTypes'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Modal } from '../components/ui'
-import { caloriesForSkate, todayISO } from '../lib/calc'
+import Icon from '../components/icons'
+import LogSkateModal from '../components/LogSkateModal'
+import { todayISO } from '../lib/calc'
 
 const RING = { volt: 'hover:border-volt-500/50', surge: 'hover:border-surge-500/50', ember: 'hover:border-ember-500/50' }
 const TEXT = { volt: 'text-volt-400', surge: 'text-surge-400', ember: 'text-ember-400' }
@@ -12,7 +14,7 @@ export default function SkateStart() {
   const nav = useNavigate()
   const data = useData()
   const [selected, setSelected] = useState(null)
-  const [manual, setManual] = useState(null)
+  const [manualTypeId, setManualTypeId] = useState(null)
   const [strength, setStrength] = useState(false)
 
   if (!data) return null
@@ -34,7 +36,7 @@ export default function SkateStart() {
             className={`card text-left transition border-white/5 ${RING[t.color]} hover:bg-ink-700/60`}
           >
             <div className="flex items-start justify-between">
-              <span className="text-2xl">{t.emoji}</span>
+              <span className={TEXT[t.color]}><Icon name={t.icon} size={28} /></span>
               <span className={`chip bg-white/5 ${TEXT[t.color]}`}>{t.met} MET</span>
             </div>
             <div className="font-display font-bold text-white mt-2">{t.name}</div>
@@ -55,18 +57,26 @@ export default function SkateStart() {
           <p className="text-sm text-slate-400 mb-3">
             Strength and recovery days build skaters too. They count toward your streak.
           </p>
-          <button onClick={() => setStrength(true)} className="btn-ghost w-full">💪 Log a strength session</button>
+          <button onClick={() => setStrength(true)} className="btn-ghost w-full">
+            <Icon name="fitness_center" size={18} /> Log a strength session
+          </button>
         </Card>
         <Card>
           <SectionTitle>Already skated?</SectionTitle>
           <p className="text-sm text-slate-400 mb-3">
             Forgot to hit start? Enter it manually — no session is wasted.
           </p>
-          <button onClick={() => setManual(SKATE_TYPES[0])} className="btn-ghost w-full">✍️ Log a past skate</button>
+          <button onClick={() => setManualTypeId(SKATE_TYPES[0].id)} className="btn-ghost w-full">
+            <Icon name="edit" size={18} /> Log a past skate
+          </button>
         </Card>
       </div>
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected ? `${selected.emoji} ${selected.name}` : ''}>
+      <Modal
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected ? <><Icon name={selected.icon} size={20} className={`mr-1.5 ${TEXT[selected.color]}`} />{selected.name}</> : ''}
+      >
         {selected && (
           <div className="space-y-4">
             <p className="text-sm text-slate-400">{selected.blurb}</p>
@@ -80,86 +90,21 @@ export default function SkateStart() {
             >
               Start live session
             </button>
-            <button className="btn-ghost w-full" onClick={() => { setManual(selected); setSelected(null) }}>
+            <button className="btn-ghost w-full" onClick={() => { setManualTypeId(selected.id); setSelected(null) }}>
               Enter manually instead
             </button>
           </div>
         )}
       </Modal>
 
-      <ManualModal type={manual} onClose={() => setManual(null)} />
+      <LogSkateModal
+        open={!!manualTypeId}
+        initialTypeId={manualTypeId}
+        onClose={() => setManualTypeId(null)}
+        onSaved={() => nav('/history')}
+      />
       <StrengthModal open={strength} onClose={() => setStrength(false)} />
     </div>
-  )
-}
-
-function ManualModal({ type, onClose }) {
-  const data = useData()
-  const nav = useNavigate()
-  const [typeId, setTypeId] = useState(type?.id || 'outdoor-fitness')
-  const [form, setForm] = useState({ name: '', minutes: 45, miles: 6, topSpeed: 16, elevation: 100, date: todayISO() })
-
-  if (!type) return null
-  const t = SKATE_TYPES.find((x) => x.id === typeId)
-  const avg = form.miles && form.minutes ? +(form.miles / (form.minutes / 60)).toFixed(1) : 0
-  const cal = caloriesForSkate({ typeId, minutes: +form.minutes, avgSpeedMph: avg, weightLb: data.profile.weightLb })
-
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  return (
-    <Modal open onClose={onClose} title="Log a skate">
-      <div className="space-y-3">
-        <div>
-          <label className="label">Discipline</label>
-          <select className="input" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
-            {SKATE_TYPES.map((x) => <option key={x.id} value={x.id}>{x.emoji} {x.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="label">Session name</label>
-          <input className="input" placeholder="Riverfront Loop" value={form.name} onChange={set('name')} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Date</label><input type="date" className="input" value={form.date} onChange={set('date')} /></div>
-          <div><label className="label">Minutes</label><input type="number" min="1" className="input" value={form.minutes} onChange={set('minutes')} /></div>
-        </div>
-        {t.gpsBased && (
-          <div className="grid grid-cols-3 gap-3">
-            <div><label className="label">Miles</label><input type="number" step="0.1" className="input" value={form.miles} onChange={set('miles')} /></div>
-            <div><label className="label">Top mph</label><input type="number" step="0.1" className="input" value={form.topSpeed} onChange={set('topSpeed')} /></div>
-            <div><label className="label">Elev ft</label><input type="number" className="input" value={form.elevation} onChange={set('elevation')} /></div>
-          </div>
-        )}
-        <div className="card-tight flex items-center justify-between">
-          <span className="text-sm text-slate-400">Estimated burn</span>
-          <span className="font-display text-xl font-bold text-volt-400 tabular-nums">{cal} cal</span>
-        </div>
-        <button
-          className="btn-primary w-full"
-          onClick={() => {
-            data.addWorkout({
-              date: form.date,
-              kind: 'skate',
-              typeId,
-              name: form.name || t.name,
-              minutes: +form.minutes,
-              miles: t.gpsBased ? +form.miles : 0,
-              avgSpeed: t.gpsBased ? avg : 0,
-              topSpeed: t.gpsBased ? +form.topSpeed : 0,
-              elevation: t.gpsBased ? +form.elevation : 0,
-              calories: cal,
-              laps: [],
-              route: [],
-              source: 'manual',
-            })
-            onClose()
-            nav('/history')
-          }}
-        >
-          Save skate
-        </button>
-      </div>
-    </Modal>
   )
 }
 
@@ -175,14 +120,14 @@ function StrengthModal({ open, onClose }) {
         <div>
           <label className="label">Type</label>
           <select className="input" value={form.kind} onChange={set('kind')}>
-            <option value="strength">💪 Strength</option>
-            <option value="recovery">🌿 Recovery / mobility</option>
+            <option value="strength">Strength</option>
+            <option value="recovery">Recovery / mobility</option>
           </select>
         </div>
         <div><label className="label">Name</label><input className="input" value={form.name} onChange={set('name')} /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Date</label><input type="date" className="input" value={form.date} onChange={set('date')} /></div>
-          <div><label className="label">Minutes</label><input type="number" className="input" value={form.minutes} onChange={set('minutes')} /></div>
+          <div><label className="label">Date</label><input type="date" max={todayISO()} className="input" value={form.date} onChange={set('date')} /></div>
+          <div><label className="label">Minutes</label><input type="number" min="1" className="input" value={form.minutes} onChange={set('minutes')} /></div>
         </div>
         <div className="card-tight flex items-center justify-between">
           <span className="text-sm text-slate-400">Estimated burn</span>

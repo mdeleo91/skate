@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
+import Icon from '../components/icons'
+import LogSkateModal from '../components/LogSkateModal'
 import { Card, Stat, Bar, Ring, Sparkline, SectionTitle } from '../components/ui'
 import { fmtDuration } from '../lib/calc'
 import { ACHIEVEMENTS } from '../lib/achievements'
@@ -13,6 +16,7 @@ function greeting() {
 
 export default function Dashboard() {
   const data = useData()
+  const [logOpen, setLogOpen] = useState(false)
   if (!data) return null
   const { d, profile, addWater } = data
 
@@ -33,7 +37,7 @@ export default function Dashboard() {
       <div>
         <div className="text-sm text-slate-400">{greeting()}, {profile.name}</div>
         <h1 className="h-title mt-0.5">
-          {movedToday ? 'You got out there today. 🛼' : 'Ready to roll?'}
+          {movedToday ? <>You got out there today. <Icon name="roller_skating" size={24} className="text-volt-400" /></> : 'Ready to roll?'}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {movedToday
@@ -92,7 +96,7 @@ export default function Dashboard() {
               <div className="flex items-baseline gap-2">
                 <div className="metric">{d.currentWeight.toFixed(1)}<span className="text-base text-slate-500 ml-1">lb</span></div>
                 <span className={`chip ${d.lbsLost > 0 ? 'bg-volt-500/15 text-volt-400' : 'bg-white/5 text-slate-400'}`}>
-                  {d.lbsLost > 0 ? `↓ ${d.lbsLost.toFixed(1)} lb` : 'tracking'}
+                  {d.lbsLost > 0 ? <><Icon name="arrow_downward" size={12} /> {d.lbsLost.toFixed(1)} lb</> : 'tracking'}
                 </span>
               </div>
               {d.weights.length >= 2 ? (
@@ -124,7 +128,7 @@ export default function Dashboard() {
           {nextGoal ? (
             <>
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{nextGoal.emoji}</span>
+                <span className="text-volt-400"><Icon name={nextGoal.icon} size={32} /></span>
                 <div>
                   <div className="font-display font-bold text-white">{nextGoal.name}</div>
                   <div className="text-xs text-slate-400">{nextGoal.desc}</div>
@@ -143,12 +147,12 @@ export default function Dashboard() {
 
       <div className="grid sm:grid-cols-3 gap-3">
         <Link to="/skate" className="card hover:border-volt-500/40 transition group">
-          <div className="text-2xl">🛼</div>
+          <div className="text-volt-400"><Icon name="roller_skating" size={26} /></div>
           <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">Start a Skate</div>
           <div className="text-xs text-slate-400 mt-0.5">Pick a discipline and go</div>
         </Link>
         <Link to="/programs" className="card hover:border-volt-500/40 transition group">
-          <div className="text-2xl">{d.activeProgram ? d.activeProgram.emoji : '🗺️'}</div>
+          <div className="text-surge-400"><Icon name={d.activeProgram ? d.activeProgram.icon : 'map'} size={26} /></div>
           <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">
             {d.activeProgram ? d.activeProgram.name : 'Join a Program'}
           </div>
@@ -157,20 +161,27 @@ export default function Dashboard() {
           </div>
         </Link>
         <Link to="/weather" className="card hover:border-volt-500/40 transition group">
-          <div className="text-2xl">🌤️</div>
+          <div className="text-ember-400"><Icon name="partly_cloudy_day" size={26} /></div>
           <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">Skate Conditions</div>
           <div className="text-xs text-slate-400 mt-0.5">Is it a good day to skate?</div>
         </Link>
       </div>
 
       <Card>
-        <SectionTitle action={<Link to="/history" className="text-xs text-volt-400 font-semibold">History</Link>}>Recent Activity</SectionTitle>
+        <SectionTitle
+          action={(
+            <span className="flex items-center gap-3">
+              <button onClick={() => setLogOpen(true)} className="text-xs text-volt-400 font-semibold">+ Log skate</button>
+              <Link to="/history" className="text-xs text-volt-400 font-semibold">History</Link>
+            </span>
+          )}
+        >Recent Activity</SectionTitle>
         {d.hasWorkouts ? (
           <div className="divide-y divide-white/5">
             {data.workouts.slice(0, 4).map((w) => (
               <div key={w.id} className="flex items-center gap-3 py-2.5 first:pt-0">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-700 text-base">
-                  {w.kind === 'strength' ? '💪' : '🛼'}
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-700 text-slate-300">
+                  <Icon name={w.kind === 'strength' ? 'fitness_center' : w.kind === 'recovery' ? 'eco' : 'roller_skating'} size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-slate-100 truncate">{w.name}</div>
@@ -183,9 +194,12 @@ export default function Dashboard() {
         ) : (
           <div className="text-sm text-slate-400 py-1">
             Nothing logged yet. Your sessions collect here — every one counts, even the short easy ones.
+            <button onClick={() => setLogOpen(true)} className="btn-ghost mt-3 !py-1.5 text-xs flex">Log a past skate</button>
           </div>
         )}
       </Card>
+
+      <LogSkateModal open={logOpen} onClose={() => setLogOpen(false)} />
     </div>
   )
 }
@@ -193,9 +207,9 @@ export default function Dashboard() {
 // Day one. There are no numbers to show, so don't show numbers — show the way in.
 function FirstRun({ name }) {
   const setup = [
-    { emoji: '⚖️', title: 'Log a starting weight', desc: 'Optional. It just gives the trend line somewhere to begin.', to: '/weight', cta: 'Log weight' },
-    { emoji: '🗺️', title: 'Pick a guided program', desc: 'Ten plans combining skating, strength and recovery.', to: '/programs', cta: 'Browse programs' },
-    { emoji: '🔧', title: 'Add your skates', desc: 'Wheel and bearing mileage then logs itself as you skate.', to: '/gear', cta: 'Add gear' },
+    { icon: 'monitor_weight', title: 'Log a starting weight', desc: 'Optional. It just gives the trend line somewhere to begin.', to: '/weight', cta: 'Log weight' },
+    { icon: 'map', title: 'Pick a guided program', desc: 'Ten plans combining skating, strength and recovery.', to: '/programs', cta: 'Browse programs' },
+    { icon: 'build', title: 'Add your skates', desc: 'Wheel and bearing mileage then logs itself as you skate.', to: '/gear', cta: 'Add gear' },
   ]
 
   return (
@@ -216,7 +230,7 @@ function FirstRun({ name }) {
         to="/skate"
         className="card block border-volt-500/40 bg-volt-500/[0.05] hover:bg-volt-500/[0.09] transition text-center py-8"
       >
-        <div className="text-5xl mb-3">🛼</div>
+        <div className="mb-3 text-volt-400"><Icon name="roller_skating" size={52} /></div>
         <div className="font-display text-xl font-bold text-white">Start your first skate</div>
         <div className="text-sm text-slate-400 mt-1.5 max-w-xs mx-auto">
           Nine disciplines, GPS tracking, and a demo mode for when you're stuck indoors.
@@ -229,7 +243,7 @@ function FirstRun({ name }) {
         <div className="grid sm:grid-cols-3 gap-3">
           {setup.map((s) => (
             <Link key={s.to} to={s.to} className="card hover:border-volt-500/40 transition group">
-              <div className="text-2xl">{s.emoji}</div>
+              <div className="text-volt-400"><Icon name={s.icon} size={24} /></div>
               <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">{s.title}</div>
               <div className="text-xs text-slate-400 mt-1 leading-relaxed">{s.desc}</div>
               <div className="text-xs font-semibold text-volt-400 mt-2.5">{s.cta} →</div>

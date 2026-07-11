@@ -48,7 +48,7 @@ export default function Photos() {
       </div>
 
       {photos.length === 0 ? (
-        <EmptyState emoji="📸" title={`No ${view.toLowerCase()} photos yet`}
+        <EmptyState icon="photo_camera" title={`No ${view.toLowerCase()} photos yet`}
           desc="Same spot, same light, same time of day. Once a month is plenty." />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

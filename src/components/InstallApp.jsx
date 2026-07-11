@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, SectionTitle } from './ui'
+import Icon from './icons'
 
 // Chrome/Edge/Android fire `beforeinstallprompt` and let us trigger the native
 // install sheet. iOS Safari does not — it only supports Share → Add to Home Screen,
@@ -47,7 +48,7 @@ export default function InstallApp() {
     return (
       <Card className="border-volt-500/30 bg-volt-500/[0.04]">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">📱</span>
+          <span className="text-volt-400"><Icon name="install_mobile" size={26} /></span>
           <div>
             <div className="font-display font-bold text-white">Installed</div>
             <div className="text-xs text-slate-400 mt-0.5">
@@ -61,7 +62,7 @@ export default function InstallApp() {
 
   return (
     <Card>
-      <SectionTitle>📱 Install Skate on your phone</SectionTitle>
+      <SectionTitle><Icon name="install_mobile" size={15} className="mr-1.5" />Install Skate on your phone</SectionTitle>
       <p className="text-sm text-slate-400 leading-relaxed">
         Skate runs as a real app on your home screen — full screen, no browser chrome, with GPS for
         live skate tracking. Nothing to download from an app store.
@@ -75,7 +76,7 @@ export default function InstallApp() {
 
       <div className="mt-4 grid sm:grid-cols-2 gap-3">
         <div className="card-tight">
-          <div className="font-semibold text-slate-100 text-sm mb-1.5"> iPhone / iPad</div>
+          <div className="font-semibold text-slate-100 text-sm mb-1.5"><Icon name="install_mobile" size={15} className="mr-1.5" />iPhone / iPad</div>
           <ol className="text-xs text-slate-400 space-y-1 list-decimal list-inside leading-relaxed">
             <li>Open this page in <span className="text-slate-200">Safari</span></li>
             <li>Tap the <span className="text-slate-200">Share</span> button (square with an arrow)</li>
@@ -84,10 +85,10 @@ export default function InstallApp() {
           </ol>
         </div>
         <div className="card-tight">
-          <div className="font-semibold text-slate-100 text-sm mb-1.5">🤖 Android</div>
+          <div className="font-semibold text-slate-100 text-sm mb-1.5"><Icon name="android" size={15} className="mr-1.5" />Android</div>
           <ol className="text-xs text-slate-400 space-y-1 list-decimal list-inside leading-relaxed">
             <li>Open this page in <span className="text-slate-200">Chrome</span></li>
-            <li>Tap <span className="text-slate-200">Install app</span> above, or the ⋮ menu</li>
+            <li>Tap <span className="text-slate-200">Install app</span> above, or the <Icon name="more_vert" size={13} /> menu</li>
             <li>Choose <span className="text-slate-200">Install app</span> / Add to Home screen</li>
             <li>Confirm — Skate installs like any other app</li>
           </ol>

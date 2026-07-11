@@ -2,28 +2,29 @@ import { NavLink, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
+import Icon from './icons'
 
 const PRIMARY = [
-  { to: '/', label: 'Today', icon: '◎' },
-  { to: '/skate', label: 'Skate', icon: '🛼' },
-  { to: '/nutrition', label: 'Fuel', icon: '🍎' },
-  { to: '/progress', label: 'Progress', icon: '📈' },
-  { to: '/more', label: 'More', icon: '⋯' },
+  { to: '/', label: 'Today', icon: 'home' },
+  { to: '/skate', label: 'Skate', icon: 'roller_skating' },
+  { to: '/nutrition', label: 'Fuel', icon: 'nutrition' },
+  { to: '/progress', label: 'Progress', icon: 'monitoring' },
+  { to: '/more', label: 'More', icon: 'more_horiz' },
 ]
 
 const ALL_LINKS = [
-  { to: '/programs', label: 'Guided Programs', icon: '🗺️', desc: 'Structured plans that build a skater' },
-  { to: '/history', label: 'Skate History', icon: '📜', desc: 'Every session, every route' },
-  { to: '/routes', label: 'Route Collection', icon: '🛣️', desc: 'Trails, parks, neighborhood loops' },
-  { to: '/stats', label: 'Lifetime Stats', icon: '🏁', desc: 'Totals and personal records' },
-  { to: '/weight', label: 'Weight Tracking', icon: '⚖️', desc: 'Trend over noise' },
-  { to: '/photos', label: 'Progress Photos', icon: '📸', desc: 'Front, side, back — month by month' },
-  { to: '/calendar', label: 'Activity Calendar', icon: '📅', desc: 'Your consistency at a glance' },
-  { to: '/achievements', label: 'Achievements', icon: '🏆', desc: 'Distance, fitness, weight, consistency' },
-  { to: '/challenges', label: 'Challenges', icon: '🎯', desc: 'Weekly and monthly targets' },
-  { to: '/gear', label: 'Gear Tracker', icon: '🔧', desc: 'Wheels, bearings, boots, mileage' },
-  { to: '/weather', label: 'Weather', icon: '🌤️', desc: 'Is it a good day to skate?' },
-  { to: '/profile', label: 'Profile & Settings', icon: '⚙️', desc: 'Goals, body stats, account' },
+  { to: '/programs', label: 'Guided Programs', icon: 'map', desc: 'Structured plans that build a skater' },
+  { to: '/history', label: 'Skate History', icon: 'history', desc: 'Every session, every route' },
+  { to: '/routes', label: 'Route Collection', icon: 'route', desc: 'Trails, parks, neighborhood loops' },
+  { to: '/stats', label: 'Lifetime Stats', icon: 'sports_score', desc: 'Totals and personal records' },
+  { to: '/weight', label: 'Weight Tracking', icon: 'monitor_weight', desc: 'Trend over noise' },
+  { to: '/photos', label: 'Progress Photos', icon: 'photo_camera', desc: 'Front, side, back — month by month' },
+  { to: '/calendar', label: 'Activity Calendar', icon: 'calendar_month', desc: 'Your consistency at a glance' },
+  { to: '/achievements', label: 'Achievements', icon: 'trophy', desc: 'Distance, fitness, weight, consistency' },
+  { to: '/challenges', label: 'Challenges', icon: 'target', desc: 'Weekly and monthly targets' },
+  { to: '/gear', label: 'Gear Tracker', icon: 'build', desc: 'Wheels, bearings, boots, mileage' },
+  { to: '/weather', label: 'Weather', icon: 'partly_cloudy_day', desc: 'Is it a good day to skate?' },
+  { to: '/profile', label: 'Profile & Settings', icon: 'settings', desc: 'Goals, body stats, account' },
 ]
 
 export { ALL_LINKS }
@@ -46,7 +47,7 @@ export default function Layout({ children }) {
           </Link>
           <div className="flex items-center gap-2">
             {streak > 0 && (
-              <span className="chip bg-volt-500/15 text-volt-400" title="Current streak">🔥 {streak}d</span>
+              <span className="chip bg-volt-500/15 text-volt-400" title="Current streak"><Icon name="local_fire_department" size={13} /> {streak}d</span>
             )}
             <div className="relative">
               <button onClick={() => setMenu((v) => !v)} className="grid h-9 w-9 place-items-center rounded-full bg-ink-700 border border-white/10 text-sm font-bold text-slate-200">
@@ -89,7 +90,7 @@ export default function Layout({ children }) {
             const active = l.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(l.to)
             return (
               <NavLink key={l.to} to={l.to} className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold ${active ? 'text-volt-400' : 'text-slate-500'}`}>
-                <span className="text-lg leading-none">{l.icon}</span>
+                <Icon name={l.icon} size={21} />
                 {l.label}
               </NavLink>
             )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { ACHIEVEMENTS, ACHIEVEMENT_CATS } from '../lib/achievements'
 import { Card, Bar, SectionTitle } from '../components/ui'
+import Icon from '../components/icons'
 
 export default function Achievements() {
   const data = useData()
@@ -49,7 +50,7 @@ export default function Achievements() {
           return (
             <Card key={a.id} className={unlocked ? 'border-volt-500/40 bg-volt-500/[0.04]' : ''}>
               <div className="flex items-start gap-3">
-                <span className={`text-3xl ${unlocked ? '' : 'grayscale opacity-40'}`}>{a.emoji}</span>
+                <span className={unlocked ? 'text-volt-400' : 'text-slate-600'}><Icon name={a.icon} size={30} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className={`font-display font-bold ${unlocked ? 'text-volt-400' : 'text-slate-200'}`}>{a.name}</span>

@@ -8,7 +8,7 @@ export const PROGRAMS = [
     tagline: 'Build to a single 10-mile skate.',
     weeks: 4,
     level: 'Beginner',
-    emoji: '🎯',
+    icon: 'target',
     focus: ['Endurance', 'Confidence'],
     summary:
       'Four weeks of gradually longer rolls. No speed work, no pressure — just time on wheels until 10 miles feels like a normal afternoon.',
@@ -16,7 +16,7 @@ export const PROGRAMS = [
       week(1, 'Get comfortable', ['Skate 2 mi easy', 'Strength: 20 min legs/core', 'Rest', 'Skate 3 mi easy', 'Rest', 'Skate 4 mi', 'Recovery roll 20 min']),
       week(2, 'Add time', ['Skate 3 mi', 'Strength: 25 min', 'Rest', 'Skate 4 mi', 'Recovery roll', 'Skate 6 mi', 'Rest']),
       week(3, 'Long roll', ['Skate 4 mi', 'Strength: 25 min', 'Rest', 'Skate 5 mi', 'Recovery roll', 'Skate 8 mi', 'Rest']),
-      week(4, 'The 10', ['Skate 3 mi easy', 'Strength: light', 'Rest', 'Skate 4 mi', 'Rest', 'Skate 10 MILES 🎉', 'Recovery roll']),
+      week(4, 'The 10', ['Skate 3 mi easy', 'Strength: light', 'Rest', 'Skate 4 mi', 'Rest', 'Skate 10 MILES', 'Recovery roll']),
     ],
   },
   {
@@ -25,7 +25,7 @@ export const PROGRAMS = [
     tagline: 'Show up. That is the whole program.',
     weeks: 4,
     level: 'Beginner',
-    emoji: '🔥',
+    icon: 'local_fire_department',
     focus: ['Consistency'],
     summary:
       'Every day you either skate, do a short strength session, or take an intentional recovery day. The goal is not distance. The goal is that skating becomes something you just do.',
@@ -42,7 +42,7 @@ export const PROGRAMS = [
     tagline: 'A skating-first deficit you can actually live with.',
     weeks: 10,
     level: 'All levels',
-    emoji: '📉',
+    icon: 'trending_down',
     focus: ['Weight loss', 'Endurance'],
     summary:
       'Roughly 1 lb/week from a modest calorie deficit plus 4 skate sessions and 2 strength sessions a week. Weigh in weekly, not daily — the trend line is the truth.',
@@ -59,7 +59,7 @@ export const PROGRAMS = [
     tagline: 'The long game. Six months of skating you enjoy.',
     weeks: 26,
     level: 'All levels',
-    emoji: '🏔️',
+    icon: 'landscape',
     focus: ['Weight loss', 'Consistency'],
     summary:
       'Built for the long haul: sustainable deficit, rising skate volume, planned deload weeks, and permission to have a bad week without quitting.',
@@ -76,7 +76,7 @@ export const PROGRAMS = [
     tagline: 'One skate a week, for a year.',
     weeks: 52,
     level: 'Beginner',
-    emoji: '📅',
+    icon: 'calendar_month',
     focus: ['Consistency'],
     summary:
       'The lowest-pressure program here. Get out once a week, every week. Miss one? The week resets, not the program.',
@@ -93,7 +93,7 @@ export const PROGRAMS = [
     tagline: '13.1 miles on wheels.',
     weeks: 8,
     level: 'Intermediate',
-    emoji: '🏅',
+    icon: 'military_tech',
     focus: ['Endurance', 'Pacing'],
     summary:
       'Weekly long skate progression to 13.1, plus tempo work so the second half does not fall apart. Includes fueling practice on the long days.',
@@ -101,7 +101,7 @@ export const PROGRAMS = [
       week(1, 'Base', ['Skate 4 mi', 'Strength', 'Tempo 3 mi', 'Rest', 'Recovery roll', 'Long 6 mi', 'Rest']),
       week(2, 'Base', ['Skate 4 mi', 'Strength', 'Tempo 4 mi', 'Rest', 'Recovery roll', 'Long 8 mi', 'Rest']),
       week(3, 'Build', ['Skate 5 mi', 'Strength', 'Intervals', 'Rest', 'Recovery roll', 'Long 10 mi', 'Rest']),
-      week(4, 'Peak', ['Skate 5 mi', 'Strength', 'Tempo 5 mi', 'Rest', 'Recovery roll', 'Long 13.1 mi 🏅', 'Rest']),
+      week(4, 'Peak', ['Skate 5 mi', 'Strength', 'Tempo 5 mi', 'Rest', 'Recovery roll', 'Long 13.1 mi', 'Rest']),
     ],
   },
   {
@@ -110,7 +110,7 @@ export const PROGRAMS = [
     tagline: '~25 miles a week. Very doable, very satisfying.',
     weeks: 4,
     level: 'Intermediate',
-    emoji: '💯',
+    icon: 'award_star',
     focus: ['Volume'],
     summary:
       'Break 100 miles into four 25-mile weeks. Mix long rolls, commutes, and short evening laps — every mile counts the same.',
@@ -118,7 +118,7 @@ export const PROGRAMS = [
       week(1, '25 miles', ['Skate 5 mi', 'Strength', 'Skate 6 mi', 'Rest', 'Skate 6 mi', 'Long 8 mi', 'Recovery']),
       week(2, '25 miles', ['Skate 6 mi', 'Strength', 'Skate 6 mi', 'Rest', 'Skate 5 mi', 'Long 8 mi', 'Recovery']),
       week(3, '25 miles', ['Skate 6 mi', 'Strength', 'Skate 7 mi', 'Rest', 'Skate 4 mi', 'Long 8 mi', 'Recovery']),
-      week(4, '25 miles', ['Skate 6 mi', 'Strength', 'Skate 6 mi', 'Rest', 'Skate 5 mi', 'Long 8 mi', '💯']),
+      week(4, '25 miles', ['Skate 6 mi', 'Strength', 'Skate 6 mi', 'Rest', 'Skate 5 mi', 'Long 8 mi', '100 miles — done']),
     ],
   },
   {
@@ -127,7 +127,7 @@ export const PROGRAMS = [
     tagline: 'Skate longer without falling apart.',
     weeks: 6,
     level: 'Intermediate',
-    emoji: '🫀',
+    icon: 'cardiology',
     focus: ['Aerobic base'],
     summary:
       'Mostly easy aerobic volume with one weekly long skate and dedicated core/hip strength — the muscles that quit first on long sessions.',
@@ -144,7 +144,7 @@ export const PROGRAMS = [
     tagline: 'Raise your average, raise your top end.',
     weeks: 6,
     level: 'Advanced',
-    emoji: '⚡',
+    icon: 'bolt',
     focus: ['Speed', 'Power'],
     summary:
       'Two interval sessions a week (short sprints + longer tempo), plus posterior-chain strength. Recovery days are mandatory, not optional.',
@@ -152,7 +152,7 @@ export const PROGRAMS = [
       week(1, 'Neuromuscular', ['8x20s sprints', 'Strength: legs', 'Tempo 3 mi', 'Recovery roll', 'Rest', 'Long easy 8 mi', 'Rest']),
       week(2, 'Threshold', ['6x1 min hard', 'Strength: legs', 'Tempo 4 mi', 'Recovery roll', 'Rest', 'Long easy 9 mi', 'Rest']),
       week(3, 'VO2', ['5x3 min hard', 'Strength: legs', 'Tempo 4 mi', 'Recovery roll', 'Rest', 'Long easy 10 mi', 'Rest']),
-      week(4, 'Sharpen', ['10x20s sprints', 'Strength light', 'Time trial 2 mi ⚡', 'Recovery roll', 'Rest', 'Long easy 8 mi', 'Rest']),
+      week(4, 'Sharpen', ['10x20s sprints', 'Strength light', 'Time trial 2 mi', 'Recovery roll', 'Rest', 'Long easy 8 mi', 'Rest']),
     ],
   },
   {
@@ -161,7 +161,7 @@ export const PROGRAMS = [
     tagline: 'Climb better. Descend braver.',
     weeks: 5,
     level: 'Advanced',
-    emoji: '⛰️',
+    icon: 'terrain',
     focus: ['Power', 'Control'],
     summary:
       'Repeats on a moderate grade, plus controlled descents and braking drills. Builds the leg strength that makes flat skating feel effortless.',
@@ -169,7 +169,7 @@ export const PROGRAMS = [
       week(1, 'Introduce', ['4x hill repeats', 'Strength: quads/glutes', 'Easy 4 mi', 'Rest', 'Braking drills', 'Long rolling 8 mi', 'Recovery']),
       week(2, 'Build', ['6x hill repeats', 'Strength', 'Easy 5 mi', 'Rest', 'Descent control', 'Long rolling 9 mi', 'Recovery']),
       week(3, 'Build', ['8x hill repeats', 'Strength', 'Easy 5 mi', 'Rest', 'Descent control', 'Long rolling 10 mi', 'Recovery']),
-      week(4, 'Peak', ['10x hill repeats', 'Strength', 'Easy 4 mi', 'Rest', 'Braking drills', 'Hilly 12 mi ⛰️', 'Recovery']),
+      week(4, 'Peak', ['10x hill repeats', 'Strength', 'Easy 4 mi', 'Rest', 'Braking drills', 'Hilly 12 mi', 'Recovery']),
     ],
   },
 ]

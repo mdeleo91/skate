@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle } from '../components/ui'
+import Icon from '../components/icons'
 import { isoDay } from '../lib/calc'
 
 const KIND_COLOR = {
@@ -51,11 +52,11 @@ export default function CalendarPage() {
 
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => setOffset((o) => o - 1)} className="btn-ghost !px-3 !py-1.5">←</button>
+          <button onClick={() => setOffset((o) => o - 1)} className="btn-ghost !px-3 !py-1.5" aria-label="Previous month"><Icon name="arrow_back" size={16} /></button>
           <div className="font-display font-bold text-white">
             {base.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
           </div>
-          <button onClick={() => setOffset((o) => Math.min(0, o + 1))} disabled={offset >= 0} className="btn-ghost !px-3 !py-1.5">→</button>
+          <button onClick={() => setOffset((o) => Math.min(0, o + 1))} disabled={offset >= 0} className="btn-ghost !px-3 !py-1.5" aria-label="Next month"><Icon name="arrow_forward" size={16} /></button>
         </div>
 
         <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold uppercase text-slate-500 mb-1.5">
@@ -95,7 +96,7 @@ export default function CalendarPage() {
       {!data.d.hasWorkouts && (
         <Card className="border-volt-500/30 bg-volt-500/[0.04]">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">📅</span>
+            <span className="text-volt-400"><Icon name="calendar_month" size={26} /></span>
             <div>
               <div className="font-display font-bold text-white">An empty calendar is just an unwritten one</div>
               <p className="text-sm text-slate-400 mt-1 leading-relaxed">

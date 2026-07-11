@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, EmptyState } from '../components/ui'
+import Icon from '../components/icons'
 import { todayISO } from '../lib/calc'
 
 const CATS = ['Boots', 'Frames', 'Wheels', 'Bearings', 'Protective Gear']
-const CAT_EMOJI = { Boots: '🥾', Frames: '🔩', Wheels: '⭕', Bearings: '⚙️', 'Protective Gear': '🦺' }
+const CAT_ICON = { Boots: 'footprint', Frames: 'construction', Wheels: 'tire_repair', Bearings: 'settings', 'Protective Gear': 'health_and_safety' }
 
 export default function Gear() {
   const data = useData()
@@ -24,7 +25,7 @@ export default function Gear() {
           <p className="text-sm text-slate-500 mt-1">Mileage logs itself from your skates. Worn wheels are slow wheels.</p>
         </div>
         <EmptyState
-          emoji="🛼"
+          icon="roller_skating"
           title="Add your first pair of skates"
           desc="Tell Skate what you roll on and it quietly counts the miles for you — boots, frames, wheels, bearings and pads — then tells you when the wheels are due for a rotation or a replacement."
           cta="Add gear"
@@ -36,7 +37,7 @@ export default function Gear() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
             {CATS.map((c) => (
               <div key={c} className="card-tight !p-3">
-                <div className="text-xl">{CAT_EMOJI[c]}</div>
+                <div className="text-slate-300"><Icon name={CAT_ICON[c]} size={22} /></div>
                 <div className="text-xs text-slate-400 mt-1">{c}</div>
               </div>
             ))}
@@ -59,7 +60,7 @@ export default function Gear() {
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Card>
-          <SectionTitle>⭕ Wheel Mileage</SectionTitle>
+          <SectionTitle><Icon name="tire_repair" size={15} className="mr-1.5" />Wheel Mileage</SectionTitle>
           {wheels.length ? wheels.map((w) => (
             <div key={w.id} className="mb-3 last:mb-0">
               <div className="flex justify-between text-sm mb-1">
@@ -77,7 +78,7 @@ export default function Gear() {
         </Card>
 
         <Card>
-          <SectionTitle>⚙️ Bearing Mileage</SectionTitle>
+          <SectionTitle><Icon name="settings" size={15} className="mr-1.5" />Bearing Mileage</SectionTitle>
           {bearings.length ? bearings.map((b) => (
             <div key={b.id} className="mb-3 last:mb-0">
               <div className="flex justify-between text-sm mb-1">
@@ -96,7 +97,7 @@ export default function Gear() {
         if (!items.length) return null
         return (
           <Card key={cat}>
-            <SectionTitle>{CAT_EMOJI[cat]} {cat}</SectionTitle>
+            <SectionTitle><Icon name={CAT_ICON[cat]} size={15} className="mr-1.5" />{cat}</SectionTitle>
             <div className="space-y-3">
               {items.map((g) => (
                 <div key={g.id} className="card-tight">
@@ -113,7 +114,7 @@ export default function Gear() {
                   <Bar value={g.miles} goal={g.lifeMiles} color={g.pct > 85 ? 'bg-ember-500' : 'bg-volt-500'} className="mt-2" />
                   {g.maintenance?.length > 0 && (
                     <div className="mt-2 text-xs text-slate-500 space-y-0.5">
-                      {g.maintenance.slice(0, 3).map((m, i) => <div key={i}>🔧 {m.date} — {m.note}</div>)}
+                      {g.maintenance.slice(0, 3).map((m, i) => <div key={i}><Icon name="build" size={12} className="mr-1" />{m.date} — {m.note}</div>)}
                     </div>
                   )}
                   <div className="flex gap-2 mt-2">
@@ -170,7 +171,7 @@ function MaintModal({ gear, onClose }) {
   const [note, setNote] = useState('')
   if (!gear) return null
   return (
-    <Modal open onClose={onClose} title={`🔧 ${gear.name}`}>
+    <Modal open onClose={onClose} title={<><Icon name="build" size={18} className="mr-1.5 text-volt-400" />{gear.name}</>}>
       <div className="space-y-3">
         <div><label className="label">What did you do?</label><input className="input" placeholder="Rotated wheels / cleaned bearings" value={note} onChange={(e) => setNote(e.target.value)} /></div>
         <button className="btn-primary w-full" disabled={!note} onClick={() => { data.logMaintenance(gear.id, note); onClose() }}>

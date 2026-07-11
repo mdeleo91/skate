@@ -1,5 +1,6 @@
 import { useData } from '../context/DataContext'
 import { Card, Stat, SectionTitle, EmptyState } from '../components/ui'
+import Icon from '../components/icons'
 import { fmtDuration, fmtPace } from '../lib/calc'
 
 export default function Stats() {
@@ -15,7 +16,7 @@ export default function Stats() {
           <p className="text-sm text-slate-500 mt-1">Everything you've done on wheels, added up.</p>
         </div>
         <EmptyState
-          emoji="🏁"
+          icon="sports_score"
           title="Your first skate will show up here"
           desc="Total miles, hours, calories, personal records — they all start filling in the moment you finish a session."
           cta="Start a Skate"
@@ -40,12 +41,12 @@ export default function Stats() {
   ]
 
   const records = [
-    { label: 'Longest Distance', value: `${d.prs.longestDistance.toFixed(2)} mi`, emoji: '📏' },
-    { label: 'Fastest Avg Speed', value: `${d.prs.fastestAvg.toFixed(1)} mph`, emoji: '⚡' },
-    { label: 'Fastest Top Speed', value: `${d.prs.fastestTop.toFixed(1)} mph`, emoji: '🚀' },
-    { label: 'Longest Workout', value: fmtDuration(d.prs.longestWorkout * 60), emoji: '⏱' },
-    { label: 'Most Calories Burned', value: `${d.prs.mostCalories.toLocaleString()} cal`, emoji: '🔥' },
-    { label: 'Longest Active Streak', value: `${d.prs.longestStreak} days`, emoji: '📅' },
+    { label: 'Longest Distance', value: `${d.prs.longestDistance.toFixed(2)} mi`, icon: 'straighten' },
+    { label: 'Fastest Avg Speed', value: `${d.prs.fastestAvg.toFixed(1)} mph`, icon: 'bolt' },
+    { label: 'Fastest Top Speed', value: `${d.prs.fastestTop.toFixed(1)} mph`, icon: 'rocket_launch' },
+    { label: 'Longest Workout', value: fmtDuration(d.prs.longestWorkout * 60), icon: 'timer' },
+    { label: 'Most Calories Burned', value: `${d.prs.mostCalories.toLocaleString()} cal`, icon: 'local_fire_department' },
+    { label: 'Longest Active Streak', value: `${d.prs.longestStreak} days`, icon: 'calendar_month' },
   ]
 
   return (
@@ -60,11 +61,11 @@ export default function Stats() {
       </div>
 
       <section>
-        <SectionTitle>🏆 Personal Records</SectionTitle>
+        <SectionTitle><Icon name="trophy" size={15} className="mr-1.5 text-volt-400" />Personal Records</SectionTitle>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {records.map((r) => (
             <Card key={r.label} className="flex items-center gap-3">
-              <span className="text-2xl">{r.emoji}</span>
+              <span className="text-volt-400"><Icon name={r.icon} size={26} /></span>
               <div>
                 <div className="text-[11px] uppercase tracking-wider text-slate-400">{r.label}</div>
                 <div className="font-display text-xl font-bold text-white tabular-nums">{r.value}</div>

@@ -28,7 +28,7 @@ export const FOODS = [
 
 export const RESTAURANTS = [
   {
-    id: 'r1', name: 'Chipotle', emoji: '🌯',
+    id: 'r1', name: 'Chipotle', icon: 'rice_bowl',
     items: [
       { id: 'r1a', name: 'Chicken Burrito Bowl', serving: '1 bowl', calories: 625, protein: 45, carbs: 62, fat: 21, fiber: 12, sugar: 6, sodium: 1370 },
       { id: 'r1b', name: 'Steak Salad', serving: '1 salad', calories: 480, protein: 34, carbs: 28, fat: 26, fiber: 10, sugar: 5, sodium: 1210 },
@@ -36,14 +36,14 @@ export const RESTAURANTS = [
     ],
   },
   {
-    id: 'r2', name: 'Sweetgreen', emoji: '🥗',
+    id: 'r2', name: 'Sweetgreen', icon: 'grocery',
     items: [
       { id: 'r2a', name: 'Harvest Bowl', serving: '1 bowl', calories: 705, protein: 29, carbs: 68, fat: 36, fiber: 9, sugar: 16, sodium: 1000 },
       { id: 'r2b', name: 'Guacamole Greens', serving: '1 salad', calories: 570, protein: 24, carbs: 35, fat: 38, fiber: 12, sugar: 6, sodium: 830 },
     ],
   },
   {
-    id: 'r3', name: 'Starbucks', emoji: '☕',
+    id: 'r3', name: 'Starbucks', icon: 'local_cafe',
     items: [
       { id: 'r3a', name: 'Grande Latte, 2%', serving: '16 fl oz', calories: 190, protein: 13, carbs: 19, fat: 7, fiber: 0, sugar: 18, sodium: 150 },
       { id: 'r3b', name: 'Egg White & Pepper Wrap', serving: '1 wrap', calories: 290, protein: 20, carbs: 34, fat: 8, fiber: 3, sugar: 5, sodium: 840 },
@@ -51,14 +51,14 @@ export const RESTAURANTS = [
     ],
   },
   {
-    id: 'r4', name: 'Panera', emoji: '🥖',
+    id: 'r4', name: 'Panera', icon: 'bakery_dining',
     items: [
       { id: 'r4a', name: 'Turkey Sandwich', serving: '1 whole', calories: 470, protein: 30, carbs: 55, fat: 14, fiber: 5, sugar: 8, sodium: 1490 },
       { id: 'r4b', name: 'Ten Vegetable Soup', serving: '1 cup', calories: 60, protein: 2, carbs: 12, fat: 1, fiber: 3, sugar: 6, sodium: 750 },
     ],
   },
   {
-    id: 'r5', name: 'Shake Shack', emoji: '🍔',
+    id: 'r5', name: 'Shake Shack', icon: 'lunch_dining',
     items: [
       { id: 'r5a', name: 'ShackBurger', serving: '1 burger', calories: 550, protein: 31, carbs: 26, fat: 34, fiber: 1, sugar: 8, sodium: 1120 },
       { id: 'r5b', name: 'Crinkle Cut Fries', serving: '1 order', calories: 470, protein: 6, carbs: 55, fat: 25, fiber: 5, sugar: 1, sodium: 570 },

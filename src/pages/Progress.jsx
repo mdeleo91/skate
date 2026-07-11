@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Stat, Bar, Sparkline, EmptyState } from '../components/ui'
 import { ACHIEVEMENTS } from '../lib/achievements'
+import Icon from '../components/icons'
 
 export default function Progress() {
   const data = useData()
@@ -16,7 +17,7 @@ export default function Progress() {
           <p className="text-sm text-slate-500 mt-1">Seven measures of a fitness journey — none of them "did you lose weight today?"</p>
         </div>
         <EmptyState
-          emoji="📈"
+          icon="monitoring"
           title="This fills in as you go"
           desc="Miles skated, workouts completed, calories burned, weight lost, time active, streaks and programs finished. Seven lines that all start at zero and only move one way."
           cta="Start a Skate"
@@ -116,7 +117,7 @@ export default function Progress() {
             <div className="space-y-2">
               {recentUnlocks.map((a) => (
                 <div key={a.id} className="flex items-center gap-2.5">
-                  <span className="text-xl">{a.emoji}</span>
+                  <span className="text-volt-400"><Icon name={a.icon} size={22} /></span>
                   <div>
                     <div className="text-sm font-semibold text-slate-100">{a.name}</div>
                     <div className="text-xs text-slate-500">{a.cat}</div>

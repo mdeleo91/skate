@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { PROGRAMS } from '../lib/programs'
 import { Card, SectionTitle, Bar, Modal } from '../components/ui'
+import Icon from '../components/icons'
 
 export default function Programs() {
   const data = useData()
@@ -28,7 +29,7 @@ export default function Programs() {
           return (
             <button key={p.id} onClick={() => setOpen(p)} className={`card text-left transition hover:border-volt-500/40 ${isActive ? 'border-volt-500/50 bg-volt-500/[0.04]' : ''}`}>
               <div className="flex items-start justify-between">
-                <span className="text-2xl">{p.emoji}</span>
+                <span className="text-volt-400"><Icon name={p.icon} size={26} /></span>
                 <div className="flex gap-1">
                   {done && <span className="chip bg-volt-500/15 text-volt-400">Completed</span>}
                   {isActive && <span className="chip bg-surge-500/15 text-surge-400">Active</span>}
@@ -46,7 +47,7 @@ export default function Programs() {
         })}
       </div>
 
-      <Modal open={!!open} onClose={() => setOpen(null)} title={open ? `${open.emoji} ${open.name}` : ''}>
+      <Modal open={!!open} onClose={() => setOpen(null)} title={open ? <><Icon name={open.icon} size={19} className="mr-1.5 text-volt-400" />{open.name}</> : ''}>
         {open && (
           <div className="space-y-4">
             <p className="text-sm text-slate-300">{open.summary}</p>
@@ -95,7 +96,7 @@ function ActivePlan({ program }) {
   return (
     <Card className="border-volt-500/30 bg-volt-500/[0.03]">
       <SectionTitle action={<span className="chip bg-volt-500/15 text-volt-400">Active</span>}>
-        {program.emoji} {program.name}
+        <Icon name={program.icon} size={15} className="mr-1.5 text-volt-400" />{program.name}
       </SectionTitle>
       <p className="text-sm text-slate-300 mb-3">{program.tagline}</p>
       <Bar value={done.length} goal={totalDays} />
@@ -119,7 +120,7 @@ function ActivePlan({ program }) {
                   >
                     <span className={`grid h-4 w-4 shrink-0 place-items-center rounded border text-[10px] ${
                       checked ? 'bg-volt-500 border-volt-500 text-ink-900' : 'border-white/20'
-                    }`}>{checked ? '✓' : ''}</span>
+                    }`}>{checked ? <Icon name="check" size={11} /> : ''}</span>
                     <span className="truncate">{d}</span>
                   </button>
                 )

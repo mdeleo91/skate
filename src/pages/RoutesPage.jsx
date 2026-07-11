@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, RouteMap, EmptyState, Modal } from '../components/ui'
+import Icon from '../components/icons'
 
 const CATS = ['All', 'Favorites', 'Trails', 'Parks', 'Neighborhood', 'Longest', 'Scenic']
 
@@ -39,7 +40,7 @@ export default function RoutesPage() {
 
       {list.length === 0 ? (
         <EmptyState
-          emoji="🛣️"
+          icon="route"
           title={data.d.hasRoutes ? 'Nothing in this collection yet' : 'Your routes will collect here'}
           desc={data.d.hasRoutes
             ? 'No routes match this filter. Skate somewhere new, or star a favourite from your history.'
@@ -61,9 +62,10 @@ export default function RoutesPage() {
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); data.toggleFavoriteRoute(r.name) }}
-                    className={`text-lg leading-none ${favNames.has(r.name) ? 'text-volt-400' : 'text-slate-600'}`}
+                    className={`leading-none ${favNames.has(r.name) ? 'text-volt-400' : 'text-slate-600'}`}
+                    aria-label="Toggle favorite"
                   >
-                    ★
+                    <Icon name={favNames.has(r.name) ? 'star_filled' : 'star'} size={18} />
                   </button>
                 </div>
                 {sample?.route && <div className="mt-3"><RouteMap points={sample.route} height={110} /></div>}

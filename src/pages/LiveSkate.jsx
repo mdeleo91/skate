@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
 import { RouteMap, Modal } from '../components/ui'
+import Icon from '../components/icons'
 
 const BIG = 'font-display font-bold tabular-nums text-white leading-none'
 
@@ -152,22 +153,22 @@ export default function LiveSkate() {
   if (status === 'idle') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-5xl mb-3">{type.emoji}</div>
+        <div className="mb-3 text-volt-400"><Icon name={type.icon} size={52} /></div>
         <h1 className="font-display text-3xl font-bold text-white">{type.name}</h1>
         <p className="text-sm text-slate-400 mt-2 max-w-xs">{type.blurb}</p>
 
         <div className="mt-8 w-full max-w-sm space-y-3">
           <button onClick={startGps} className="btn-primary w-full !py-4 text-base">
-            📍 Start with GPS
+            <Icon name="my_location" size={18} /> Start with GPS
           </button>
           <button onClick={startDemo} className="btn-ghost w-full !py-3">
-            ▶︎ Demo mode (simulated)
+            <Icon name="play_arrow" size={18} /> Demo mode (simulated)
           </button>
           <p className="text-xs text-slate-500 pt-1">
             GPS needs location permission and works best outdoors. Demo mode simulates a realistic
             session so you can see the screen without leaving the couch.
           </p>
-          <Link to="/skate" className="block text-xs text-slate-500 hover:text-slate-300 pt-2">← Pick a different discipline</Link>
+          <Link to="/skate" className="block text-xs text-slate-500 hover:text-slate-300 pt-2"><Icon name="arrow_back" size={12} /> Pick a different discipline</Link>
         </div>
       </div>
     )
@@ -179,7 +180,7 @@ export default function LiveSkate() {
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${status === 'running' ? 'bg-volt-500 live-dot' : 'bg-slate-600'}`} />
           <span className="text-sm font-semibold text-slate-300">
-            {type.emoji} {type.name}{status === 'paused' && ' · Paused'}
+            <Icon name={type.icon} size={16} className="mr-1" />{type.name}{status === 'paused' && ' · Paused'}
           </span>
         </div>
         <span className={`chip ${mode === 'gps' ? 'bg-surge-500/15 text-surge-400' : 'bg-ember-500/15 text-ember-400'}`}>
@@ -230,15 +231,15 @@ export default function LiveSkate() {
 
       <div className="grid grid-cols-3 gap-3 pb-[env(safe-area-inset-bottom)]">
         {status === 'running' ? (
-          <button onClick={pause} className="btn-ghost !py-4">⏸ Pause</button>
+          <button onClick={pause} className="btn-ghost !py-4"><Icon name="pause" size={18} /> Pause</button>
         ) : (
-          <button onClick={resume} className="btn-primary !py-4">▶︎ Resume</button>
+          <button onClick={resume} className="btn-primary !py-4"><Icon name="play_arrow" size={18} /> Resume</button>
         )}
-        <button onClick={lap} className="btn-ghost !py-4">🏁 Lap</button>
-        <button onClick={finish} className="btn-danger !py-4">■ Finish</button>
+        <button onClick={lap} className="btn-ghost !py-4"><Icon name="sports_score" size={18} /> Lap</button>
+        <button onClick={finish} className="btn-danger !py-4"><Icon name="stop" size={18} /> Finish</button>
       </div>
 
-      <Modal open={saveOpen} onClose={() => setSaveOpen(false)} title="Nice work 🛼">
+      <Modal open={saveOpen} onClose={() => setSaveOpen(false)} title={<>Nice work <Icon name="roller_skating" size={20} className="text-volt-400" /></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2 text-center">
             <Summary label="Distance" value={`${miles.toFixed(2)} mi`} />
@@ -285,11 +286,11 @@ function Highlights({ miles, avgSpeed, topSpeed, minutes, calories }) {
   const prs = data?.d?.prs
   if (!prs) return null
   const hits = []
-  if (miles > prs.longestDistance) hits.push('🥇 Longest Distance — new PR')
-  if (avgSpeed > prs.fastestAvg) hits.push('⚡ Fastest Avg Speed — new PR')
-  if (topSpeed > prs.fastestTop) hits.push('🚀 Fastest Top Speed — new PR')
-  if (minutes > prs.longestWorkout) hits.push('⏱ Longest Continuous Skate — new PR')
-  if (calories > prs.mostCalories) hits.push('🔥 Most Calories Burned — new PR')
+  if (miles > prs.longestDistance) hits.push({ icon: 'military_tech', text: 'Longest Distance — new PR' })
+  if (avgSpeed > prs.fastestAvg) hits.push({ icon: 'bolt', text: 'Fastest Avg Speed — new PR' })
+  if (topSpeed > prs.fastestTop) hits.push({ icon: 'rocket_launch', text: 'Fastest Top Speed — new PR' })
+  if (minutes > prs.longestWorkout) hits.push({ icon: 'timer', text: 'Longest Continuous Skate — new PR' })
+  if (calories > prs.mostCalories) hits.push({ icon: 'local_fire_department', text: 'Most Calories Burned — new PR' })
   if (!hits.length) {
     return (
       <div className="card-tight text-sm text-slate-400">
@@ -300,7 +301,11 @@ function Highlights({ miles, avgSpeed, topSpeed, minutes, calories }) {
   return (
     <div className="card-tight border border-volt-500/30 bg-volt-500/5 space-y-1">
       <div className="font-display font-bold text-volt-400 text-sm">Post-skate highlights</div>
-      {hits.map((h) => <div key={h} className="text-sm text-slate-200">{h}</div>)}
+      {hits.map((h) => (
+        <div key={h.text} className="text-sm text-slate-200">
+          <Icon name={h.icon} size={15} className="mr-1.5 text-volt-400" />{h.text}
+        </div>
+      ))}
     </div>
   )
 }

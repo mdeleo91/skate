@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Icon from '../components/icons'
 
 const HIGHLIGHTS = [
-  { emoji: '🛼', title: 'Skating is the workout', desc: 'Nine disciplines, each with its own calorie model and stats.' },
-  { emoji: '📈', title: 'Trends over daily noise', desc: 'One bad weigh-in is weather. The trend line is climate.' },
-  { emoji: '🔥', title: 'Consistency you can see', desc: 'Streaks, calendars, and programs that ask: did you get outside?' },
+  { icon: 'roller_skating', title: 'Skating is the workout', desc: 'Nine disciplines, each with its own calorie model and stats.' },
+  { icon: 'monitoring', title: 'Trends over daily noise', desc: 'One bad weigh-in is weather. The trend line is climate.' },
+  { icon: 'local_fire_department', title: 'Consistency you can see', desc: 'Streaks, calendars, and programs that ask: did you get outside?' },
 ]
 
 export default function Login() {
@@ -47,7 +48,7 @@ export default function Login() {
         <div className="mt-8 space-y-3 max-w-md">
           {HIGHLIGHTS.map((h) => (
             <div key={h.title} className="flex gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3.5">
-              <span className="text-xl">{h.emoji}</span>
+              <span className="text-volt-400"><Icon name={h.icon} size={22} /></span>
               <div>
                 <div className="font-semibold text-slate-100 text-sm">{h.title}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{h.desc}</div>

@@ -23,7 +23,7 @@ export default function Weight() {
           <p className="text-sm text-slate-500 mt-1">The trend is the truth. One heavy morning is just salt and sleep.</p>
         </div>
         <EmptyState
-          emoji="⚖️"
+          icon="monitor_weight"
           title="Log your starting weight"
           desc="One number, once. From there Skate draws a trend line and quietly ignores the daily noise — because water, salt and sleep move the scale more than fat ever does."
           cta="Log starting weight"
