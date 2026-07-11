@@ -54,6 +54,35 @@ function sampleState(email) {
 
 const keyFor = (user) => `skate.data.${user?.id || 'anon'}`
 
+// v1 accounts were auto-seeded with fake workouts, weigh-ins and gear at signup.
+// Those are somebody's *fabricated* history sitting in a real account, so clear them —
+// but never at the cost of anything the user actually logged. Seeded workouts are
+// tagged source: 'seed', so real entries are easy to tell apart and always survive.
+function migrate(saved, email) {
+  if (!saved || (saved.version ?? 1) >= 2) return saved
+
+  const realWorkouts = (saved.workouts || []).filter((w) => w.source !== 'seed')
+  const userAddedSomething =
+    realWorkouts.length > 0 ||
+    (saved.meals || []).length > 0 ||
+    (saved.photos || []).length > 0 ||
+    (saved.savedMeals || []).length > 0
+
+  // An untouched demo account: wipe it back to a clean first run, keeping only
+  // the things the user could plausibly have set themselves.
+  if (!userAddedSomething) {
+    const fresh = emptyState(email)
+    return {
+      ...fresh,
+      profile: { ...fresh.profile, name: saved.profile?.name || fresh.profile.name },
+      water: saved.water || {},
+    }
+  }
+
+  // They logged real sessions — keep every one, drop only the fabricated ones.
+  return { ...saved, version: 2, workouts: realWorkouts, isSample: false }
+}
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [state, setState] = useState(null)
@@ -63,9 +92,9 @@ export function DataProvider({ children }) {
     const raw = localStorage.getItem(keyFor(user))
     if (raw) {
       try {
-        setState(JSON.parse(raw))
+        setState(migrate(JSON.parse(raw), user.email))
         return
-      } catch { /* fall through to fresh seed */ }
+      } catch { /* corrupt payload — fall through to a clean account */ }
     }
     setState(emptyState(user.email))
   }, [user])
