@@ -27,6 +27,18 @@ export async function searchOpenFoodFacts(query, { signal } = {}) {
     })
 }
 
+// Look up a single product by barcode (EAN/UPC). Returns null when the code
+// isn't in the database — that's a normal outcome, not an error.
+export async function lookupBarcode(code, { signal } = {}) {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,nutriments`
+  const res = await fetch(url, { signal })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Barcode lookup is unavailable right now.')
+  const data = await res.json()
+  if (!data.product) return null
+  return mapProduct(data.product)
+}
+
 // Normalize an Open Food Facts product into the app's food shape.
 // All values are per 100 g, so the servings multiplier stays meaningful.
 function mapProduct(p) {

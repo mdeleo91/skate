@@ -4,6 +4,7 @@ import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
 import Icon from '../components/icons'
 import { FOODS, RESTAURANTS, MEAL_SLOTS } from '../lib/foods'
 import { searchOpenFoodFacts } from '../lib/foodSearch'
+import BarcodeScanner from '../components/BarcodeScanner'
 import { todayISO } from '../lib/calc'
 
 const TABS = ['Today', 'Search', 'Restaurants', 'Recipes', 'Saved', 'History']
@@ -12,6 +13,7 @@ export default function Nutrition() {
   const data = useData()
   const [tab, setTab] = useState('Today')
   const [scanner, setScanner] = useState(false)
+  const [scanned, setScanned] = useState(null)
   if (!data) return null
 
   return (
@@ -40,21 +42,12 @@ export default function Nutrition() {
       {tab === 'Saved' && <SavedTab />}
       {tab === 'History' && <HistoryTab />}
 
-      <Modal open={scanner} onClose={() => setScanner(false)} title={<><Icon name="barcode_scanner" size={19} className="mr-1.5 text-volt-400" />Barcode Scanner</>}>
-        <div className="space-y-4">
-          <div className="relative grid place-items-center h-48 rounded-xl bg-ink-900 border border-white/10 overflow-hidden">
-            <div className="absolute inset-x-8 h-0.5 bg-ember-500 shadow-[0_0_12px_2px_rgba(242,87,27,0.6)] live-dot" />
-            <div className="absolute inset-6 border-2 border-white/20 rounded-lg" />
-            <span className="opacity-30"><Icon name="barcode_scanner" size={40} /></span>
-          </div>
-          <p className="text-sm text-slate-400">
-            Camera scanning is stubbed in this build — it needs a barcode-decoding library and a
-            hosted product database (Open Food Facts or similar). The UI and the flow are here; the
-            lookup is not wired up yet.
-          </p>
-          <button onClick={() => setScanner(false)} className="btn-ghost w-full">Close</button>
-        </div>
-      </Modal>
+      <BarcodeScanner
+        open={scanner}
+        onClose={() => setScanner(false)}
+        onFound={(food) => { setScanner(false); setScanned(food) }}
+      />
+      <AddFoodModal food={scanned} onClose={() => setScanned(null)} />
     </div>
   )
 }
