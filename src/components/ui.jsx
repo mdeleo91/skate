@@ -118,13 +118,20 @@ export function RouteMap({ points, height = 160, color = '#A3F015' }) {
   )
 }
 
-export function EmptyState({ emoji = '🛼', title, desc, cta, to }) {
+// The first thing a new user sees on most screens. It should feel like an invitation,
+// not an error message — no "no data found", no empty tables, no shame.
+export function EmptyState({ emoji = '🛼', title, desc, cta, to, onClick, hint, children }) {
   return (
-    <div className="card text-center py-10">
+    <div className="card text-center py-10 px-5">
       <div className="text-4xl mb-3">{emoji}</div>
       <div className="font-display font-bold text-white text-lg">{title}</div>
-      {desc && <div className="text-sm text-slate-400 mt-1 max-w-xs mx-auto">{desc}</div>}
-      {cta && to && <Link to={to} className="btn-primary mt-4 inline-flex">{cta}</Link>}
+      {desc && <div className="text-sm text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">{desc}</div>}
+      {cta && to && <Link to={to} className="btn-primary mt-5 inline-flex">{cta}</Link>}
+      {cta && !to && onClick && (
+        <button onClick={onClick} className="btn-primary mt-5 inline-flex">{cta}</button>
+      )}
+      {children}
+      {hint && <div className="text-xs text-slate-500 mt-3.5 max-w-sm mx-auto">{hint}</div>}
     </div>
   )
 }
