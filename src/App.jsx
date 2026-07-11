@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import SkateStart from './pages/SkateStart'
 import LiveSkate from './pages/LiveSkate'
+import SkateDetail from './pages/SkateDetail'
 import History from './pages/History'
 import Programs from './pages/Programs'
 import Nutrition from './pages/Nutrition'
@@ -34,54 +35,55 @@ function Splash() {
   )
 }
 
+// Auth gate with the app chrome (header + nav).
 function Protected({ children }) {
   const { user, loading } = useAuth()
   const loc = useLocation()
   if (loading) return <Splash />
   if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname }} />
-  return (
-    <DataProvider>
-      <Layout>{children}</Layout>
-    </DataProvider>
-  )
+  return <Layout>{children}</Layout>
 }
 
-function LiveShell() {
+// Auth gate without chrome, for immersive full-screen views (live skate, session detail).
+function FullScreen({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <Splash />
   if (!user) return <Navigate to="/login" replace />
-  return (
-    <DataProvider>
-      <LiveSkate />
-    </DataProvider>
-  )
+  return children
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/live" element={<LiveShell />} />
-        <Route path="/" element={<Protected><Dashboard /></Protected>} />
-        <Route path="/skate" element={<Protected><SkateStart /></Protected>} />
-        <Route path="/history" element={<Protected><History /></Protected>} />
-        <Route path="/programs" element={<Protected><Programs /></Protected>} />
-        <Route path="/nutrition" element={<Protected><Nutrition /></Protected>} />
-        <Route path="/weight" element={<Protected><Weight /></Protected>} />
-        <Route path="/photos" element={<Protected><Photos /></Protected>} />
-        <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
-        <Route path="/achievements" element={<Protected><Achievements /></Protected>} />
-        <Route path="/challenges" element={<Protected><Challenges /></Protected>} />
-        <Route path="/gear" element={<Protected><Gear /></Protected>} />
-        <Route path="/stats" element={<Protected><Stats /></Protected>} />
-        <Route path="/routes" element={<Protected><RoutesPage /></Protected>} />
-        <Route path="/weather" element={<Protected><Weather /></Protected>} />
-        <Route path="/progress" element={<Protected><Progress /></Protected>} />
-        <Route path="/profile" element={<Protected><Profile /></Protected>} />
-        <Route path="/more" element={<Protected><More /></Protected>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {/* One DataProvider for the whole app. When each route had its own,
+          state written right before navigation (e.g. saving a live skate,
+          which unmounted /live's provider) could be dropped before it was
+          persisted — live sessions silently vanished. */}
+      <DataProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/live" element={<FullScreen><LiveSkate /></FullScreen>} />
+          <Route path="/session/:id" element={<FullScreen><SkateDetail /></FullScreen>} />
+          <Route path="/" element={<Protected><Dashboard /></Protected>} />
+          <Route path="/skate" element={<Protected><SkateStart /></Protected>} />
+          <Route path="/history" element={<Protected><History /></Protected>} />
+          <Route path="/programs" element={<Protected><Programs /></Protected>} />
+          <Route path="/nutrition" element={<Protected><Nutrition /></Protected>} />
+          <Route path="/weight" element={<Protected><Weight /></Protected>} />
+          <Route path="/photos" element={<Protected><Photos /></Protected>} />
+          <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
+          <Route path="/achievements" element={<Protected><Achievements /></Protected>} />
+          <Route path="/challenges" element={<Protected><Challenges /></Protected>} />
+          <Route path="/gear" element={<Protected><Gear /></Protected>} />
+          <Route path="/stats" element={<Protected><Stats /></Protected>} />
+          <Route path="/routes" element={<Protected><RoutesPage /></Protected>} />
+          <Route path="/weather" element={<Protected><Weather /></Protected>} />
+          <Route path="/progress" element={<Protected><Progress /></Protected>} />
+          <Route path="/profile" element={<Protected><Profile /></Protected>} />
+          <Route path="/more" element={<Protected><More /></Protected>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </DataProvider>
     </AuthProvider>
   )
 }

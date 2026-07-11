@@ -33,6 +33,8 @@ export default function LiveSkate() {
   const last = useRef(null)
   const lastAlt = useRef(null)
   const demoRef = useRef({ t: 0 })
+  const startedAt = useRef(null)
+  const hrSamples = useRef([])
 
   const weightLb = data?.profile?.weightLb || 175
   const minutes = elapsed / 60
@@ -84,13 +86,17 @@ export default function LiveSkate() {
       setTopSpeed((t) => Math.max(t, mph))
       setMeters((m) => m + (mph * 1609.344) / 3600)
       setElevation((e) => e + Math.max(0, Math.sin(s.t / 14) * 0.9))
-      setHr(Math.round(132 + Math.sin(s.t / 11) * 12 + (Math.random() - 0.5) * 5))
-      setPoints((ps) => {
-        const a = 0.0016
-        const lat = 39.7392 + Math.sin(s.t / 22) * a * 3 + Math.sin(s.t / 7) * a * 0.4
-        const lon = -104.9903 + Math.cos(s.t / 22) * a * 4 + Math.cos(s.t / 9) * a * 0.5
-        return [...ps, { lat, lon, t: Date.now() }]
-      })
+      const bpm = Math.round(132 + Math.sin(s.t / 11) * 12 + (Math.random() - 0.5) * 5)
+      hrSamples.current.push(bpm)
+      setHr(bpm)
+      // Advance the fake position by the simulated speed along a wandering
+      // heading, so the GPS trace agrees with the speed/distance numbers —
+      // splits and the speed-colored map are computed from the trace.
+      s.heading = (s.heading ?? 0) + Math.sin(s.t / 15) * 0.07 + (Math.random() - 0.5) * 0.03
+      const stepM = (mph * 1609.344) / 3600
+      s.lat = (s.lat ?? 39.7392) + (stepM * Math.cos(s.heading)) / 111320
+      s.lon = (s.lon ?? -104.9903) + (stepM * Math.sin(s.heading)) / (111320 * Math.cos((s.lat * Math.PI) / 180))
+      setPoints((ps) => [...ps, { lat: s.lat, lon: s.lon, t: Date.now() }])
     }, 1000)
     return () => clearInterval(i)
   }, [status, mode, type.id])
@@ -105,11 +111,13 @@ export default function LiveSkate() {
       (err) => setGpsError(err.message || 'Location unavailable — switch to demo mode to keep tracking time.'),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
     )
+    startedAt.current = new Date().toISOString()
     setMode('gps')
     setStatus('running')
   }
 
   function startDemo() {
+    startedAt.current = new Date().toISOString()
     setMode('demo')
     setStatus('running')
   }
@@ -130,22 +138,28 @@ export default function LiveSkate() {
   }
 
   function save() {
-    data.addWorkout({
+    const hrs = hrSamples.current
+    const id = data.addWorkout({
       date: todayISO(),
       kind: 'skate',
       typeId,
       name: name || type.name,
       minutes: Math.max(1, Math.round(minutes)),
+      durationSec: elapsed,
+      startedAt: startedAt.current,
       miles: +miles.toFixed(2),
       avgSpeed: +avgSpeed.toFixed(1),
       topSpeed: +topSpeed.toFixed(1),
       elevation: Math.round(elevation),
+      avgHr: hrs.length ? Math.round(hrs.reduce((a, v) => a + v, 0) / hrs.length) : undefined,
       calories,
       laps,
-      route: points.map((p) => ({ lat: p.lat, lon: p.lon })),
+      // Keep timestamps: the detail screen's speed coloring and per-mile
+      // splits are computed from them.
+      route: points.map((p) => ({ lat: p.lat, lon: p.lon, t: p.t })),
       source: mode,
     })
-    nav('/history')
+    nav(`/session/${id}`)
   }
 
   if (!data) return null

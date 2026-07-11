@@ -109,7 +109,14 @@ export function DataProvider({ children }) {
   const api = useMemo(() => ({
     setProfile: (patch) => update((s) => ({ ...s, profile: { ...s.profile, ...patch } })),
 
-    addWorkout: (w) => update((s) => ({ ...s, workouts: [{ id: uid(), ...w }, ...s.workouts] })),
+    addWorkout: (w) => {
+      const id = uid()
+      update((s) => ({ ...s, workouts: [{ id, ...w }, ...s.workouts] }))
+      return id
+    },
+    updateWorkout: (id, patch) => update((s) => ({
+      ...s, workouts: s.workouts.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+    })),
     deleteWorkout: (id) => update((s) => ({ ...s, workouts: s.workouts.filter((w) => w.id !== id) })),
 
     addMeal: (m) => update((s) => ({ ...s, meals: [{ id: uid(), date: todayISO(), ...m }, ...s.meals] })),
