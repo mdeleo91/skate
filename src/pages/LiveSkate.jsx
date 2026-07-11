@@ -1,0 +1,306 @@
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useData } from '../context/DataContext'
+import { getSkateType } from '../lib/skateTypes'
+import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
+import { RouteMap, Modal } from '../components/ui'
+
+const BIG = 'font-display font-bold tabular-nums text-white leading-none'
+
+export default function LiveSkate() {
+  const [params] = useSearchParams()
+  const nav = useNavigate()
+  const data = useData()
+  const typeId = params.get('type') || 'outdoor-fitness'
+  const type = getSkateType(typeId)
+
+  const [status, setStatus] = useState('idle') // idle | running | paused | done
+  const [mode, setMode] = useState(null)       // 'gps' | 'demo'
+  const [gpsError, setGpsError] = useState(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [meters, setMeters] = useState(0)
+  const [speed, setSpeed] = useState(0)        // mph
+  const [topSpeed, setTopSpeed] = useState(0)
+  const [elevation, setElevation] = useState(0)
+  const [hr, setHr] = useState(null)
+  const [points, setPoints] = useState([])
+  const [laps, setLaps] = useState([])
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [name, setName] = useState('')
+
+  const watchId = useRef(null)
+  const last = useRef(null)
+  const lastAlt = useRef(null)
+  const demoRef = useRef({ t: 0 })
+
+  const weightLb = data?.profile?.weightLb || 175
+  const minutes = elapsed / 60
+  const miles = milesFromMeters(meters)
+  const avgSpeed = minutes > 0 ? miles / (minutes / 60) : 0
+  const calories = caloriesForSkate({ typeId, minutes, avgSpeedMph: avgSpeed, weightLb })
+
+  // Clock
+  useEffect(() => {
+    if (status !== 'running') return
+    const i = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(i)
+  }, [status])
+
+  const handlePosition = useCallback((pos) => {
+    const { latitude: lat, longitude: lon, altitude, speed: mps, accuracy } = pos.coords
+    if (accuracy && accuracy > 50) return // ignore garbage fixes
+    const p = { lat, lon, t: Date.now() }
+    setPoints((ps) => {
+      if (last.current) {
+        const dm = distanceMeters(last.current, p)
+        if (dm > 1 && dm < 120) setMeters((m) => m + dm)
+      }
+      last.current = p
+      return [...ps, p]
+    })
+    if (altitude != null) {
+      if (lastAlt.current != null && altitude > lastAlt.current) {
+        setElevation((e) => e + (altitude - lastAlt.current) * 3.28084)
+      }
+      lastAlt.current = altitude
+    }
+    if (mps != null && mps >= 0) {
+      const mph = mphFromMps(mps)
+      setSpeed(mph)
+      setTopSpeed((t) => Math.max(t, mph))
+    }
+  }, [])
+
+  // Demo mode: a plausible simulated skate so the screen is testable indoors.
+  useEffect(() => {
+    if (status !== 'running' || mode !== 'demo') return
+    const i = setInterval(() => {
+      const s = demoRef.current
+      s.t += 1
+      const base = type.id === 'speed' ? 15 : type.id === 'recovery' ? 8 : 11
+      const mph = Math.max(0, base + Math.sin(s.t / 9) * 2.6 + (Math.random() - 0.5) * 1.4)
+      setSpeed(mph)
+      setTopSpeed((t) => Math.max(t, mph))
+      setMeters((m) => m + (mph * 1609.344) / 3600)
+      setElevation((e) => e + Math.max(0, Math.sin(s.t / 14) * 0.9))
+      setHr(Math.round(132 + Math.sin(s.t / 11) * 12 + (Math.random() - 0.5) * 5))
+      setPoints((ps) => {
+        const a = 0.0016
+        const lat = 39.7392 + Math.sin(s.t / 22) * a * 3 + Math.sin(s.t / 7) * a * 0.4
+        const lon = -104.9903 + Math.cos(s.t / 22) * a * 4 + Math.cos(s.t / 9) * a * 0.5
+        return [...ps, { lat, lon, t: Date.now() }]
+      })
+    }, 1000)
+    return () => clearInterval(i)
+  }, [status, mode, type.id])
+
+  function startGps() {
+    if (!navigator.geolocation) {
+      setGpsError('This browser has no Geolocation API.')
+      return startDemo()
+    }
+    watchId.current = navigator.geolocation.watchPosition(
+      handlePosition,
+      (err) => setGpsError(err.message || 'Location unavailable — switch to demo mode to keep tracking time.'),
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
+    )
+    setMode('gps')
+    setStatus('running')
+  }
+
+  function startDemo() {
+    setMode('demo')
+    setStatus('running')
+  }
+
+  function stopWatch() {
+    if (watchId.current != null) {
+      navigator.geolocation.clearWatch(watchId.current)
+      watchId.current = null
+    }
+  }
+  useEffect(() => stopWatch, [])
+
+  function pause() { setStatus('paused'); setSpeed(0) }
+  function resume() { setStatus('running') }
+  function finish() { stopWatch(); setStatus('done'); setSpeed(0); setSaveOpen(true) }
+  function lap() {
+    setLaps((l) => [...l, { n: l.length + 1, atSec: elapsed, miles: +miles.toFixed(2), avg: +avgSpeed.toFixed(1) }])
+  }
+
+  function save() {
+    data.addWorkout({
+      date: todayISO(),
+      kind: 'skate',
+      typeId,
+      name: name || type.name,
+      minutes: Math.max(1, Math.round(minutes)),
+      miles: +miles.toFixed(2),
+      avgSpeed: +avgSpeed.toFixed(1),
+      topSpeed: +topSpeed.toFixed(1),
+      elevation: Math.round(elevation),
+      calories,
+      laps,
+      route: points.map((p) => ({ lat: p.lat, lon: p.lon })),
+      source: mode,
+    })
+    nav('/history')
+  }
+
+  if (!data) return null
+
+  if (status === 'idle') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-5xl mb-3">{type.emoji}</div>
+        <h1 className="font-display text-3xl font-bold text-white">{type.name}</h1>
+        <p className="text-sm text-slate-400 mt-2 max-w-xs">{type.blurb}</p>
+
+        <div className="mt-8 w-full max-w-sm space-y-3">
+          <button onClick={startGps} className="btn-primary w-full !py-4 text-base">
+            📍 Start with GPS
+          </button>
+          <button onClick={startDemo} className="btn-ghost w-full !py-3">
+            ▶︎ Demo mode (simulated)
+          </button>
+          <p className="text-xs text-slate-500 pt-1">
+            GPS needs location permission and works best outdoors. Demo mode simulates a realistic
+            session so you can see the screen without leaving the couch.
+          </p>
+          <Link to="/skate" className="block text-xs text-slate-500 hover:text-slate-300 pt-2">← Pick a different discipline</Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${status === 'running' ? 'bg-volt-500 live-dot' : 'bg-slate-600'}`} />
+          <span className="text-sm font-semibold text-slate-300">
+            {type.emoji} {type.name}{status === 'paused' && ' · Paused'}
+          </span>
+        </div>
+        <span className={`chip ${mode === 'gps' ? 'bg-surge-500/15 text-surge-400' : 'bg-ember-500/15 text-ember-400'}`}>
+          {mode === 'gps' ? 'GPS' : 'DEMO'}
+        </span>
+      </div>
+
+      {gpsError && (
+        <div className="mt-3 rounded-xl border border-ember-500/25 bg-ember-500/10 px-3 py-2 text-xs text-ember-400">
+          {gpsError}
+          <button onClick={startDemo} className="underline ml-1 font-semibold">Use demo mode</button>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col justify-center py-6">
+        <div className="text-center">
+          <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">Current Speed</div>
+          <div className={`${BIG} text-[5.5rem] sm:text-[7rem] text-volt-400`}>{speed.toFixed(1)}</div>
+          <div className="text-sm text-slate-500 -mt-1">mph</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-8">
+          <Metric label="Distance" value={miles.toFixed(2)} unit="mi" />
+          <Metric label="Elapsed" value={fmtDuration(elapsed)} unit="" />
+          <Metric label="Avg Speed" value={avgSpeed.toFixed(1)} unit="mph" />
+          <Metric label="Calories" value={calories.toLocaleString()} unit="cal" accent="text-ember-400" />
+          <Metric label="Elevation Gain" value={Math.round(elevation)} unit="ft" />
+          <Metric label="Heart Rate" value={hr ?? '—'} unit={hr ? 'bpm' : 'optional'} accent="text-surge-400" />
+        </div>
+
+        {laps.length > 0 && (
+          <div className="mt-4 card-tight max-h-28 overflow-y-auto">
+            {laps.slice().reverse().map((l) => (
+              <div key={l.n} className="flex justify-between text-xs py-1 tabular-nums">
+                <span className="text-slate-400">Lap {l.n}</span>
+                <span className="text-slate-300">{fmtDuration(l.atSec)} · {l.miles} mi · {l.avg} mph</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {points.length > 3 && (
+          <div className="mt-4">
+            <RouteMap points={points} height={130} />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 pb-[env(safe-area-inset-bottom)]">
+        {status === 'running' ? (
+          <button onClick={pause} className="btn-ghost !py-4">⏸ Pause</button>
+        ) : (
+          <button onClick={resume} className="btn-primary !py-4">▶︎ Resume</button>
+        )}
+        <button onClick={lap} className="btn-ghost !py-4">🏁 Lap</button>
+        <button onClick={finish} className="btn-danger !py-4">■ Finish</button>
+      </div>
+
+      <Modal open={saveOpen} onClose={() => setSaveOpen(false)} title="Nice work 🛼">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <Summary label="Distance" value={`${miles.toFixed(2)} mi`} />
+            <Summary label="Time" value={fmtDuration(elapsed)} />
+            <Summary label="Avg Speed" value={`${avgSpeed.toFixed(1)} mph`} />
+            <Summary label="Calories" value={`${calories}`} />
+            <Summary label="Top Speed" value={`${topSpeed.toFixed(1)} mph`} />
+            <Summary label="Elevation" value={`${Math.round(elevation)} ft`} />
+          </div>
+          <Highlights miles={miles} avgSpeed={avgSpeed} topSpeed={topSpeed} minutes={minutes} calories={calories} />
+          <div>
+            <label className="label">Name this session</label>
+            <input className="input" placeholder={type.name} value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <button onClick={save} className="btn-primary w-full">Save skate</button>
+          <button onClick={() => nav('/')} className="btn-ghost w-full">Discard</button>
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+function Metric({ label, value, unit, accent = 'text-white' }) {
+  return (
+    <div className="card text-center py-4">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{label}</div>
+      <div className={`font-display text-3xl font-bold tabular-nums mt-1 ${accent}`}>{value}</div>
+      {unit && <div className="text-[11px] text-slate-500">{unit}</div>}
+    </div>
+  )
+}
+
+function Summary({ label, value }) {
+  return (
+    <div className="card-tight">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="font-display font-bold text-white tabular-nums">{value}</div>
+    </div>
+  )
+}
+
+function Highlights({ miles, avgSpeed, topSpeed, minutes, calories }) {
+  const data = useData()
+  const prs = data?.d?.prs
+  if (!prs) return null
+  const hits = []
+  if (miles > prs.longestDistance) hits.push('🥇 Longest Distance — new PR')
+  if (avgSpeed > prs.fastestAvg) hits.push('⚡ Fastest Avg Speed — new PR')
+  if (topSpeed > prs.fastestTop) hits.push('🚀 Fastest Top Speed — new PR')
+  if (minutes > prs.longestWorkout) hits.push('⏱ Longest Continuous Skate — new PR')
+  if (calories > prs.mostCalories) hits.push('🔥 Most Calories Burned — new PR')
+  if (!hits.length) {
+    return (
+      <div className="card-tight text-sm text-slate-400">
+        No records broken — but you got outside and moved. That's the point.
+      </div>
+    )
+  }
+  return (
+    <div className="card-tight border border-volt-500/30 bg-volt-500/5 space-y-1">
+      <div className="font-display font-bold text-volt-400 text-sm">Post-skate highlights</div>
+      {hits.map((h) => <div key={h} className="text-sm text-slate-200">{h}</div>)}
+    </div>
+  )
+}
