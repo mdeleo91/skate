@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
 import Icon from '../components/icons'
 import { FOODS, RESTAURANTS, MEAL_SLOTS } from '../lib/foods'
+import { searchOpenFoodFacts } from '../lib/foodSearch'
 import { todayISO } from '../lib/calc'
 
 const TABS = ['Today', 'Search', 'Restaurants', 'Recipes', 'Saved', 'History']
@@ -213,15 +214,35 @@ function SearchTab() {
   const { favorites } = useData()
   const [q, setQ] = useState('')
   const [pick, setPick] = useState(null)
+  const [quickAdd, setQuickAdd] = useState(false)
+  const [online, setOnline] = useState({ status: 'idle', query: '', items: [] })
   const results = useMemo(
     () => FOODS.filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(q.toLowerCase())),
     [q]
   )
   const favs = FOODS.filter((f) => favorites.includes(f.id))
 
+  async function searchOnline() {
+    const query = q.trim()
+    if (query.length < 2) return
+    setOnline({ status: 'loading', query, items: [] })
+    try {
+      const items = await searchOpenFoodFacts(query)
+      setOnline({ status: 'done', query, items })
+    } catch {
+      setOnline({ status: 'error', query, items: [] })
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <input className="input" placeholder="Search foods…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input
+        className="input"
+        placeholder="Search any ingredient — pasta, tofu, cereal…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') searchOnline() }}
+      />
       {!q && favs.length > 0 && (
         <Card>
           <SectionTitle><Icon name="star_filled" size={15} className="mr-1.5 text-volt-400" />Favorite Foods</SectionTitle>
@@ -229,11 +250,117 @@ function SearchTab() {
         </Card>
       )}
       <Card>
-        <SectionTitle>{q ? `${results.length} results` : 'Food Database'}</SectionTitle>
+        <SectionTitle>{q ? `${results.length} in library` : 'Food Library'}</SectionTitle>
         <FoodList foods={results} onPick={setPick} />
       </Card>
+
+      {q.trim().length >= 2 && (
+        <Card>
+          <SectionTitle action={online.status === 'done' ? <span className="text-xs text-slate-500">via Open Food Facts</span> : null}>
+            Online Search
+          </SectionTitle>
+          {online.status === 'idle' && (
+            <div>
+              <p className="text-sm text-slate-400 mb-3">
+                Not in the library? Search Open Food Facts — a free database of over 3 million foods.
+              </p>
+              <button onClick={searchOnline} className="btn-ghost w-full">
+                <Icon name="travel_explore" size={17} /> Search online for “{q.trim()}”
+              </button>
+            </div>
+          )}
+          {online.status === 'loading' && <div className="text-sm text-slate-400 py-2">Searching Open Food Facts…</div>}
+          {online.status === 'error' && (
+            <div className="text-sm text-slate-400">
+              Couldn't reach the food database — you might be offline.
+              <div className="flex gap-2 mt-3">
+                <button onClick={searchOnline} className="btn-ghost flex-1 !py-1.5 text-xs">Try again</button>
+                <button onClick={() => setQuickAdd(true)} className="btn-ghost flex-1 !py-1.5 text-xs">Enter it by hand</button>
+              </div>
+            </div>
+          )}
+          {online.status === 'done' && (
+            online.items.length
+              ? (
+                <>
+                  <p className="text-xs text-slate-500 mb-2">Values are per 100 g — adjust servings when you log.</p>
+                  <FoodList foods={online.items} onPick={setPick} />
+                  {online.query !== q.trim() && (
+                    <button onClick={searchOnline} className="btn-ghost w-full mt-3 !py-1.5 text-xs">
+                      Search online for “{q.trim()}” instead
+                    </button>
+                  )}
+                </>
+              )
+              : <div className="text-sm text-slate-500">No online matches for “{online.query}”.</div>
+          )}
+        </Card>
+      )}
+
+      <Card>
+        <SectionTitle>Can't find it?</SectionTitle>
+        <p className="text-sm text-slate-400 mb-3">
+          Log anything with your own numbers — straight off the package label.
+        </p>
+        <button onClick={() => setQuickAdd(true)} className="btn-ghost w-full">
+          <Icon name="edit" size={16} /> Quick add a custom food
+        </button>
+      </Card>
+
       <AddFoodModal food={pick} onClose={() => setPick(null)} />
+      <QuickAddModal open={quickAdd} initialName={q.trim()} onClose={() => setQuickAdd(false)} />
     </div>
+  )
+}
+
+function QuickAddModal({ open, initialName, onClose }) {
+  const { addMeal } = useData()
+  if (!open) return null
+  return <QuickAddForm key={initialName} initialName={initialName} addMeal={addMeal} onClose={onClose} />
+}
+
+function QuickAddForm({ initialName, addMeal, onClose }) {
+  const [f, setF] = useState({
+    name: initialName || '', slot: 'Snacks', calories: '', protein: '', carbs: '', fat: '',
+  })
+  const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
+  const valid = f.name.trim() && f.calories !== '' && +f.calories >= 0
+  return (
+    <Modal open onClose={onClose} title="Quick add">
+      <div className="space-y-3">
+        <div><label className="label">Food name</label><input className="input" placeholder="Pasta with butter" value={f.name} onChange={set('name')} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Meal</label>
+            <select className="input" value={f.slot} onChange={set('slot')}>
+              {MEAL_SLOTS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><label className="label">Calories</label><input type="number" min="0" className="input" placeholder="250" value={f.calories} onChange={set('calories')} /></div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div><label className="label">Protein g</label><input type="number" min="0" className="input" value={f.protein} onChange={set('protein')} /></div>
+          <div><label className="label">Carbs g</label><input type="number" min="0" className="input" value={f.carbs} onChange={set('carbs')} /></div>
+          <div><label className="label">Fat g</label><input type="number" min="0" className="input" value={f.fat} onChange={set('fat')} /></div>
+        </div>
+        <button
+          className="btn-primary w-full"
+          disabled={!valid}
+          onClick={() => {
+            addMeal({
+              slot: f.slot, name: f.name.trim(), serving: 'custom entry',
+              calories: Math.round(+f.calories), protein: Math.round(+f.protein || 0),
+              carbs: Math.round(+f.carbs || 0), fat: Math.round(+f.fat || 0),
+              fiber: 0, sugar: 0, sodium: 0,
+            })
+            onClose()
+          }}
+        >
+          Add to {f.slot}
+        </button>
+        <p className="text-xs text-slate-500 text-center">Macros are optional — calories alone still count toward your day.</p>
+      </div>
+    </Modal>
   )
 }
 
