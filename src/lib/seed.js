@@ -105,14 +105,17 @@ export function seedGear() {
   ]
 }
 
-export function seedProfile(email) {
+// A brand-new account. Physiology defaults exist only so the calorie formula has
+// something to chew on before the user fills in Profile — but weight history,
+// start weight and goal weight are deliberately null until the user logs them.
+export function blankProfile(email) {
   return {
     name: email ? email.split('@')[0] : 'Skater',
-    weightLb: 192,
-    startWeightLb: 202,
-    goalWeightLb: 175,
+    weightLb: 175,
+    startWeightLb: null,
+    goalWeightLb: null,
     heightIn: 70,
-    age: 34,
+    age: 35,
     sex: 'male',
     activity: 1.45,
     weeklyLossLb: 1,
