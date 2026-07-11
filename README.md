@@ -29,7 +29,19 @@ today?" the app asks: did you get outside? did you move? did you build consisten
 
 ## Stack
 
-Vite · React 18 · React Router · Tailwind CSS · Supabase Auth
+Vite · React 18 · React Router · Tailwind CSS · Supabase Auth · installable PWA
+
+## Install it on your phone
+
+Skate is a Progressive Web App — it installs to your home screen and runs full screen,
+with GPS, no app store involved.
+
+- **iPhone / iPad:** open the site in **Safari** → tap **Share** → **Add to Home Screen** → **Add**.
+- **Android:** open in **Chrome** → tap **Install app** (in the app's Profile screen, or the ⋮ menu).
+
+The service worker caches the app shell, so it opens instantly and still loads if you lose
+signal mid-trail. It deliberately never caches Supabase auth or the weather API — those
+always go to the network.
 
 ## Auth
 
@@ -54,6 +66,10 @@ npm run dev
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key (safe for browsers; protected by RLS) |
 
 ## Data
+
+New accounts start **completely empty** — no seeded workouts, weigh-ins or gear. Every screen has a
+first-run empty state that points at the next useful action instead of showing a fake zero.
+Example data is opt-in from **Profile → Load sample data**, and can be cleared again at any time.
 
 User data (workouts, meals, weights, photos, gear) persists to `localStorage`, keyed by Supabase
 user id. Every collection is shaped like a future Postgres row (`id`, `date`, typed fields) so
