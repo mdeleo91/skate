@@ -66,6 +66,20 @@ function TodayTab() {
 
   return (
     <div className="space-y-4">
+      {!d.hasMeals && (
+        <Card className="border-volt-500/30 bg-volt-500/[0.04] text-center py-7">
+          <div className="text-4xl mb-2.5">🍎</div>
+          <div className="font-display font-bold text-white text-lg">Log your first meal</div>
+          <div className="text-sm text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
+            Search a food, pick a restaurant dish, or build a recipe. Skate does the macro math and
+            adds back the calories you burn skating — because you earned those.
+          </div>
+          <div className="text-xs text-slate-500 mt-3">
+            Your daily target is {d.budget.target.toLocaleString()} cal, based on your Profile.
+          </div>
+        </Card>
+      )}
+
       <Card className="flex flex-col sm:flex-row items-center gap-5">
         <Ring value={d.consumed} goal={d.budget.target} label={d.consumed.toLocaleString()} sub={`of ${d.budget.target.toLocaleString()} cal`} />
         <div className="flex-1 w-full grid grid-cols-3 gap-3">

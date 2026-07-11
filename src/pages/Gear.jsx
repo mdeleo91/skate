@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
-import { Card, SectionTitle, Bar, Modal } from '../components/ui'
+import { Card, SectionTitle, Bar, Modal, EmptyState } from '../components/ui'
 import { todayISO } from '../lib/calc'
 
 const CATS = ['Boots', 'Frames', 'Wheels', 'Bearings', 'Protective Gear']
@@ -15,6 +15,37 @@ export default function Gear() {
   const gear = data.d.gear
   const wheels = gear.filter((g) => g.cat === 'Wheels')
   const bearings = gear.filter((g) => g.cat === 'Bearings')
+
+  if (!gear.length) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="h-title">Gear Tracker</h1>
+          <p className="text-sm text-slate-500 mt-1">Mileage logs itself from your skates. Worn wheels are slow wheels.</p>
+        </div>
+        <EmptyState
+          emoji="🛼"
+          title="Add your first pair of skates"
+          desc="Tell Skate what you roll on and it quietly counts the miles for you — boots, frames, wheels, bearings and pads — then tells you when the wheels are due for a rotation or a replacement."
+          cta="Add gear"
+          onClick={() => setAdd(true)}
+          hint="Nothing to configure. Mileage accrues from the skates you log."
+        />
+        <Card>
+          <SectionTitle>What you can track</SectionTitle>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+            {CATS.map((c) => (
+              <div key={c} className="card-tight !p-3">
+                <div className="text-xl">{CAT_EMOJI[c]}</div>
+                <div className="text-xs text-slate-400 mt-1">{c}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <AddGear open={add} onClose={() => setAdd(false)} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">

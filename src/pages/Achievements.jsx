@@ -24,6 +24,12 @@ export default function Achievements() {
       <Card>
         <Bar value={unlockedCount} goal={ACHIEVEMENTS.length} />
         <div className="text-xs text-slate-500 mt-1.5">{Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}% complete</div>
+        {unlockedCount === 0 && (
+          <div className="text-sm text-slate-400 mt-3">
+            All locked, for now. The very first one — <span className="text-slate-200 font-semibold">First Mile</span> —
+            is closer than it looks.
+          </div>
+        )}
       </Card>
 
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar">

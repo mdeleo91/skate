@@ -1,11 +1,30 @@
 import { useData } from '../context/DataContext'
-import { Card, Stat, SectionTitle } from '../components/ui'
+import { Card, Stat, SectionTitle, EmptyState } from '../components/ui'
 import { fmtDuration, fmtPace } from '../lib/calc'
 
 export default function Stats() {
   const data = useData()
   if (!data) return null
   const { d } = data
+
+  if (!d.hasWorkouts) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="h-title">Lifetime Stats</h1>
+          <p className="text-sm text-slate-500 mt-1">Everything you've done on wheels, added up.</p>
+        </div>
+        <EmptyState
+          emoji="🏁"
+          title="Your first skate will show up here"
+          desc="Total miles, hours, calories, personal records — they all start filling in the moment you finish a session."
+          cta="Start a Skate"
+          to="/skate"
+          hint="Records worth beating have to be set first."
+        />
+      </div>
+    )
+  }
 
   const lifetime = [
     ['Total Miles', d.totalMiles.toFixed(1)],

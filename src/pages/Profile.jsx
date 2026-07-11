@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { Card, SectionTitle, Stat } from '../components/ui'
+import InstallApp from '../components/InstallApp'
 import { calorieBudget, macroTargets, bmiLabel } from '../lib/calc'
 import { isSupabaseConfigured } from '../lib/supabase'
 
@@ -97,21 +98,46 @@ export default function Profile() {
         </p>
       </Card>
 
+      <InstallApp />
+
       <Card>
         <SectionTitle>Account & Data</SectionTitle>
         <div className="text-sm text-slate-400 space-y-1 mb-4">
           <div>Auth: <span className="text-slate-200">{isSupabaseConfigured ? 'Supabase (email + password)' : 'Demo mode (local only)'}</span></div>
           <div>Data: <span className="text-slate-200">stored locally in this browser</span></div>
+          {data.isSample && (
+            <div className="chip bg-ember-500/15 text-ember-400 mt-1">Sample data loaded</div>
+          )}
         </div>
-        <div className="grid sm:grid-cols-2 gap-2">
-          <button
-            onClick={() => { if (confirm('Reset all workouts, meals, weights and gear back to sample data?')) data.resetAll() }}
-            className="btn-ghost"
-          >
-            Reset to sample data
-          </button>
-          <button onClick={signOut} className="btn-ghost !text-ember-400">Sign out</button>
+
+        <div className="card-tight mb-3">
+          <div className="font-semibold text-slate-100 text-sm">Sample data</div>
+          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+            Fills the app with a month of example skates, weigh-ins and gear so you can see what every
+            screen looks like with history behind it. This is <span className="text-slate-200">not</span> your
+            data — it replaces what's here, and you can clear it again at any time.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <button
+              onClick={() => {
+                if (confirm('Replace everything in this account with example data? Anything you have logged will be overwritten.')) data.loadSampleData()
+              }}
+              className="btn-ghost !py-1.5 text-xs"
+            >
+              Load sample data
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Clear all workouts, meals, weigh-ins, photos and gear? This cannot be undone.')) data.clearAll()
+              }}
+              className="btn-ghost !py-1.5 text-xs !text-ember-400"
+            >
+              Clear all data
+            </button>
+          </div>
         </div>
+
+        <button onClick={signOut} className="btn-ghost w-full !text-ember-400">Sign out</button>
       </Card>
     </div>
   )

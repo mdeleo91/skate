@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
-import { Card, SectionTitle, Stat, Bar, Sparkline } from '../components/ui'
+import { Card, SectionTitle, Stat, Bar, Sparkline, EmptyState } from '../components/ui'
 import { ACHIEVEMENTS } from '../lib/achievements'
 
 export default function Progress() {
@@ -8,12 +8,44 @@ export default function Progress() {
   if (!data) return null
   const { d } = data
 
+  if (d.isBrandNew) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="h-title">Your Progress</h1>
+          <p className="text-sm text-slate-500 mt-1">Seven measures of a fitness journey — none of them "did you lose weight today?"</p>
+        </div>
+        <EmptyState
+          emoji="📈"
+          title="This fills in as you go"
+          desc="Miles skated, workouts completed, calories burned, weight lost, time active, streaks and programs finished. Seven lines that all start at zero and only move one way."
+          cta="Start a Skate"
+          to="/skate"
+        />
+        <Card>
+          <SectionTitle>The seven measures</SectionTitle>
+          <div className="space-y-3">
+            {['Miles Skated', 'Workouts Completed', 'Calories Burned', 'Weight Lost', 'Time Active', 'Current Streak', 'Programs Completed'].map((label) => (
+              <div key={label}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-slate-400">{label}</span>
+                  <span className="tabular-nums text-slate-600">—</span>
+                </div>
+                <Bar value={0} goal={100} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   const weekly = last8Weeks(data.workouts)
   const pillars = [
     { label: 'Miles Skated', value: d.totalMiles.toFixed(1), goal: 500, cur: d.totalMiles, color: 'bg-volt-500' },
     { label: 'Workouts Completed', value: data.workouts.length, goal: 100, cur: data.workouts.length, color: 'bg-surge-500' },
     { label: 'Calories Burned', value: d.totalCalories.toLocaleString(), goal: 10000, cur: d.totalCalories, color: 'bg-ember-500' },
-    { label: 'Weight Lost', value: `${d.lbsLost.toFixed(1)} lb`, goal: Math.max(1, d.startWeight - data.profile.goalWeightLb), cur: d.lbsLost, color: 'bg-volt-500' },
+    { label: 'Weight Lost', value: d.hasWeights ? `${d.lbsLost.toFixed(1)} lb` : '—', goal: Math.max(1, (d.startWeight ?? 0) - (data.profile.goalWeightLb ?? 0)) || 10, cur: d.lbsLost, color: 'bg-volt-500' },
     { label: 'Time Active', value: `${(d.totalMinutes / 60).toFixed(1)} h`, goal: 100, cur: d.totalMinutes / 60, color: 'bg-surge-500' },
     { label: 'Current Streak', value: `${d.streak} days`, goal: 30, cur: d.streak, color: 'bg-ember-500' },
     { label: 'Programs Completed', value: d.metrics.programsCompleted, goal: 3, cur: d.metrics.programsCompleted, color: 'bg-volt-500' },

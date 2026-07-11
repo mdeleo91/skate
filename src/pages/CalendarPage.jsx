@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle } from '../components/ui'
 import { isoDay } from '../lib/calc'
@@ -90,6 +91,22 @@ export default function CalendarPage() {
           <Legend color="bg-ink-700" label={`Rest — ${restDays}`} />
         </div>
       </Card>
+
+      {!data.d.hasWorkouts && (
+        <Card className="border-volt-500/30 bg-volt-500/[0.04]">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📅</span>
+            <div>
+              <div className="font-display font-bold text-white">An empty calendar is just an unwritten one</div>
+              <p className="text-sm text-slate-400 mt-1 leading-relaxed">
+                Each day you skate, lift or take an intentional recovery day lights up here. Rest days
+                stay dark — and that's part of the plan, not a failure.
+              </p>
+              <Link to="/skate" className="btn-primary mt-3 !py-1.5 text-xs inline-flex">Start a Skate</Link>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <SectionTitle>This Month</SectionTitle>

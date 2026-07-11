@@ -38,7 +38,16 @@ export default function RoutesPage() {
       </div>
 
       {list.length === 0 ? (
-        <EmptyState emoji="🛣️" title="No routes here yet" desc="Routes appear once you name and log a skate." cta="Start a skate" to="/skate" />
+        <EmptyState
+          emoji="🛣️"
+          title={data.d.hasRoutes ? 'Nothing in this collection yet' : 'Your routes will collect here'}
+          desc={data.d.hasRoutes
+            ? 'No routes match this filter. Skate somewhere new, or star a favourite from your history.'
+            : 'Name a skate when you finish it — "Riverfront Loop", "Ride to work" — and Skate starts tracking your best time, longest run and fastest average on it.'}
+          cta="Start a Skate"
+          to="/skate"
+          hint={data.d.hasRoutes ? null : 'Trails, parks, neighbourhood loops and commutes all sort themselves.'}
+        />
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {list.map((r) => {

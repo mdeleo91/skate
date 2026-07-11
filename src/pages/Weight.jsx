@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
-import { Card, SectionTitle, Sparkline, Stat, Bar, Modal } from '../components/ui'
+import { Card, SectionTitle, Sparkline, Stat, Bar, Modal, EmptyState } from '../components/ui'
 import { bmiLabel, todayISO } from '../lib/calc'
 
 export default function Weight() {
@@ -13,6 +14,34 @@ export default function Weight() {
   const series = d.weights.slice(-range)
   const values = series.map((w) => w.weightLb)
   const latest = d.weights[d.weights.length - 1]
+
+  if (!d.hasWeights) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="h-title">Weight</h1>
+          <p className="text-sm text-slate-500 mt-1">The trend is the truth. One heavy morning is just salt and sleep.</p>
+        </div>
+        <EmptyState
+          emoji="⚖️"
+          title="Log your starting weight"
+          desc="One number, once. From there Skate draws a trend line and quietly ignores the daily noise — because water, salt and sleep move the scale more than fat ever does."
+          cta="Log starting weight"
+          onClick={() => setOpen(true)}
+          hint="Entirely optional. You can track miles and never step on a scale."
+        />
+        <Card>
+          <SectionTitle>How this page will work</SectionTitle>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Weigh in weekly, same time of day. Skate plots every entry but draws a dashed regression
+            line through them — that line is the one to watch. You'll also be able to track body fat,
+            waist, hips and chest, which often move when the scale stubbornly refuses to.
+          </p>
+        </Card>
+        <LogModal open={open} onClose={() => setOpen(false)} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -48,15 +77,27 @@ export default function Weight() {
 
       <Card>
         <SectionTitle>Progress to Goal</SectionTitle>
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-slate-400">Start {d.startWeight} lb</span>
-          <span className="text-slate-400">Goal {profile.goalWeightLb} lb</span>
-        </div>
-        <Bar value={d.goalPct} goal={100} />
-        <div className="text-sm mt-2">
-          <span className="font-display font-bold text-volt-400">{d.lbsLost.toFixed(1)} lb down</span>
-          <span className="text-slate-500"> · {Math.max(0, d.currentWeight - profile.goalWeightLb).toFixed(1)} lb to go · {d.goalPct}% there</span>
-        </div>
+        {profile.goalWeightLb ? (
+          <>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-slate-400">Start {d.startWeight} lb</span>
+              <span className="text-slate-400">Goal {profile.goalWeightLb} lb</span>
+            </div>
+            <Bar value={d.goalPct} goal={100} />
+            <div className="text-sm mt-2">
+              <span className="font-display font-bold text-volt-400">{d.lbsLost.toFixed(1)} lb down</span>
+              <span className="text-slate-500"> · {Math.max(0, d.currentWeight - profile.goalWeightLb).toFixed(1)} lb to go · {d.goalPct}% there</span>
+            </div>
+          </>
+        ) : (
+          <div>
+            <p className="text-sm text-slate-400">
+              No goal weight set yet. Set one and this fills with a progress bar — or don't, and just
+              keep skating. Both are legitimate.
+            </p>
+            <Link to="/profile" className="btn-ghost mt-3 !py-1.5 text-xs inline-flex">Set a goal weight</Link>
+          </div>
+        )}
       </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
