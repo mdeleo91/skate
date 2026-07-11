@@ -1,20 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
 import Icon from '../components/icons'
-import { FOODS, RESTAURANTS, MEAL_SLOTS } from '../lib/foods'
+import { FOODS, MEAL_SLOTS } from '../lib/foods'
 import { searchOpenFoodFacts } from '../lib/foodSearch'
 import BarcodeScanner from '../components/BarcodeScanner'
 import { todayISO } from '../lib/calc'
 
-const TABS = ['Today', 'Search', 'Restaurants', 'Recipes', 'Saved', 'History']
+const TABS = ['Today', 'History']
 
 export default function Nutrition() {
   const data = useData()
   const [tab, setTab] = useState('Today')
+  const [q, setQ] = useState('')
+  const [submitSignal, setSubmitSignal] = useState(0)
   const [scanner, setScanner] = useState(false)
   const [scanned, setScanned] = useState(null)
   if (!data) return null
+
+  const searching = q.trim().length > 0
 
   return (
     <div className="space-y-5">
@@ -26,21 +30,42 @@ export default function Nutrition() {
         <button onClick={() => setScanner(true)} className="btn-ghost !px-3 shrink-0"><Icon name="barcode_scanner" size={17} /> Scan</button>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`chip whitespace-nowrap !px-3 !py-1.5 ${tab === t ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400 hover:text-slate-200'}`}>
-            {t}
+      <div className="relative">
+        <Icon name="search" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        <input
+          className="input !pl-10 !pr-10"
+          placeholder="Search any food — pasta, tofu, cereal…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') setSubmitSignal((s) => s + 1) }}
+        />
+        {searching && (
+          <button
+            onClick={() => setQ('')}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-2 text-lg leading-none text-slate-500 hover:text-white"
+          >
+            ×
           </button>
-        ))}
+        )}
       </div>
 
-      {tab === 'Today' && <TodayTab />}
-      {tab === 'Search' && <SearchTab />}
-      {tab === 'Restaurants' && <RestaurantTab />}
-      {tab === 'Recipes' && <RecipeTab />}
-      {tab === 'Saved' && <SavedTab />}
-      {tab === 'History' && <HistoryTab />}
+      {searching ? (
+        <SearchResults q={q} submitSignal={submitSignal} />
+      ) : (
+        <>
+          <div className="flex gap-1.5">
+            {TABS.map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`chip !px-3 !py-1.5 ${tab === t ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400 hover:text-slate-200'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+          {tab === 'Today' && <TodayTab />}
+          {tab === 'History' && <HistoryTab />}
+        </>
+      )}
 
       <BarcodeScanner
         open={scanner}
@@ -53,11 +78,13 @@ export default function Nutrition() {
 }
 
 function TodayTab() {
-  const { d, meals, deleteMeal, addWater, profile } = useData()
+  const { d, meals, deleteMeal, addWater, profile, favorites } = useData()
+  const [pick, setPick] = useState(null)
   const today = todayISO()
   const todays = meals.filter((m) => m.date === today)
   const M = d.macrosToday
   const T = d.macros
+  const favs = FOODS.filter((f) => favorites.includes(f.id))
 
   return (
     <div className="space-y-4">
@@ -66,8 +93,8 @@ function TodayTab() {
           <div className="mb-2.5 text-volt-400"><Icon name="nutrition" size={40} /></div>
           <div className="font-display font-bold text-white text-lg">Log your first meal</div>
           <div className="text-sm text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
-            Search a food, pick a restaurant dish, or build a recipe. Skate does the macro math and
-            adds back the calories you burn skating — because you earned those.
+            Type what you ate in the search bar above, or scan a barcode. Skate does the macro math
+            and adds back the calories you burn skating — because you earned those.
           </div>
           <div className="text-xs text-slate-500 mt-3">
             Your daily target is {d.budget.target.toLocaleString()} cal, based on your Profile.
@@ -103,6 +130,13 @@ function TodayTab() {
         </div>
       </Card>
 
+      {favs.length > 0 && (
+        <Card>
+          <SectionTitle><Icon name="star_filled" size={15} className="mr-1.5 text-volt-400" />Favorite Foods</SectionTitle>
+          <FoodList foods={favs} onPick={setPick} />
+        </Card>
+      )}
+
       {MEAL_SLOTS.map((slot) => {
         const items = todays.filter((m) => m.slot === slot)
         const cal = items.reduce((a, m) => a + m.calories, 0)
@@ -133,6 +167,8 @@ function TodayTab() {
           </Card>
         )
       })}
+
+      <AddFoodModal food={pick} onClose={() => setPick(null)} />
     </div>
   )
 }
@@ -203,17 +239,14 @@ function AddFoodModal({ food, onClose }) {
   )
 }
 
-function SearchTab() {
-  const { favorites } = useData()
-  const [q, setQ] = useState('')
+function SearchResults({ q, submitSignal }) {
   const [pick, setPick] = useState(null)
   const [quickAdd, setQuickAdd] = useState(false)
   const [online, setOnline] = useState({ status: 'idle', query: '', items: [] })
   const results = useMemo(
-    () => FOODS.filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(q.toLowerCase())),
+    () => FOODS.filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(q.trim().toLowerCase())),
     [q]
   )
-  const favs = FOODS.filter((f) => favorites.includes(f.id))
 
   async function searchOnline() {
     const query = q.trim()
@@ -227,23 +260,16 @@ function SearchTab() {
     }
   }
 
+  // Enter in the search bar above fires the online search from here.
+  useEffect(() => {
+    if (submitSignal > 0) searchOnline()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitSignal])
+
   return (
     <div className="space-y-4">
-      <input
-        className="input"
-        placeholder="Search any ingredient — pasta, tofu, cereal…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') searchOnline() }}
-      />
-      {!q && favs.length > 0 && (
-        <Card>
-          <SectionTitle><Icon name="star_filled" size={15} className="mr-1.5 text-volt-400" />Favorite Foods</SectionTitle>
-          <FoodList foods={favs} onPick={setPick} />
-        </Card>
-      )}
       <Card>
-        <SectionTitle>{q ? `${results.length} in library` : 'Food Library'}</SectionTitle>
+        <SectionTitle>{results.length} in library</SectionTitle>
         <FoodList foods={results} onPick={setPick} />
       </Card>
 
@@ -373,117 +399,6 @@ function FoodList({ foods, onPick }) {
           </div>
         </button>
       ))}
-    </div>
-  )
-}
-
-function RestaurantTab() {
-  const [pick, setPick] = useState(null)
-  return (
-    <div className="space-y-3">
-      {RESTAURANTS.map((r) => (
-        <Card key={r.id}>
-          <SectionTitle><Icon name={r.icon} size={15} className="mr-1.5" />{r.name}</SectionTitle>
-          <FoodList foods={r.items.map((i) => ({ ...i, brand: r.name }))} onPick={setPick} />
-        </Card>
-      ))}
-      <AddFoodModal food={pick} onClose={() => setPick(null)} />
-    </div>
-  )
-}
-
-function RecipeTab() {
-  const { saveMeal, addMeal } = useData()
-  const [name, setName] = useState('')
-  const [items, setItems] = useState([])
-  const [q, setQ] = useState('')
-  const results = FOODS.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6)
-  const total = items.reduce((a, i) => ({
-    calories: a.calories + i.calories, protein: a.protein + i.protein, carbs: a.carbs + i.carbs,
-    fat: a.fat + i.fat, fiber: a.fiber + i.fiber, sugar: a.sugar + i.sugar, sodium: a.sodium + i.sodium,
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 })
-
-  return (
-    <Card>
-      <SectionTitle><Icon name="menu_book" size={15} className="mr-1.5" />Recipe Builder</SectionTitle>
-      <div className="space-y-3">
-        <input className="input" placeholder="Recipe name (e.g. Post-skate bowl)" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="input" placeholder="Add an ingredient…" value={q} onChange={(e) => setQ(e.target.value)} />
-        {q && (
-          <div className="card-tight divide-y divide-white/5">
-            {results.map((f) => (
-              <button key={f.id} onClick={() => { setItems((it) => [...it, f]); setQ('') }} className="w-full flex justify-between py-2 text-sm text-left">
-                <span className="text-slate-200">{f.name}</span>
-                <span className="text-slate-400 tabular-nums">{f.calories}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {items.length > 0 && (
-          <div className="card-tight">
-            {items.map((i, idx) => (
-              <div key={idx} className="flex justify-between items-center py-1.5 text-sm">
-                <span className="text-slate-200">{i.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="tabular-nums text-slate-400">{i.calories}</span>
-                  <button onClick={() => setItems((it) => it.filter((_, j) => j !== idx))} className="text-slate-600 hover:text-ember-400">×</button>
-                </div>
-              </div>
-            ))}
-            <div className="border-t border-white/10 mt-2 pt-2 flex justify-between font-semibold">
-              <span className="text-slate-300">Total</span>
-              <span className="tabular-nums text-volt-400">{Math.round(total.calories)} cal</span>
-            </div>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            disabled={!name || !items.length}
-            onClick={() => { saveMeal(name, items); setName(''); setItems([]) }}
-            className="btn-ghost"
-          >
-            Save recipe
-          </button>
-          <button
-            disabled={!items.length}
-            onClick={() => {
-              addMeal({ slot: 'Dinner', name: name || 'Recipe', serving: `${items.length} ingredients`, ...roundAll(total) })
-              setName(''); setItems([])
-            }}
-            className="btn-primary"
-          >
-            Log it now
-          </button>
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-const roundAll = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v)]))
-
-function SavedTab() {
-  const { savedMeals, addMeal } = useData()
-  if (!savedMeals.length) {
-    return <Card><div className="text-sm text-slate-400">No saved meals yet. Build one in the Recipes tab — a meal you eat every week shouldn't cost you five taps every time.</div></Card>
-  }
-  return (
-    <div className="space-y-3">
-      {savedMeals.map((m) => {
-        const total = m.items.reduce((a, i) => ({
-          calories: a.calories + i.calories, protein: a.protein + i.protein, carbs: a.carbs + i.carbs,
-          fat: a.fat + i.fat, fiber: a.fiber + i.fiber, sugar: a.sugar + i.sugar, sodium: a.sodium + i.sodium,
-        }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 })
-        return (
-          <Card key={m.id} className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="font-semibold text-slate-100">{m.name}</div>
-              <div className="text-xs text-slate-500">{m.items.length} items · {Math.round(total.calories)} cal</div>
-            </div>
-            <button onClick={() => addMeal({ slot: 'Lunch', name: m.name, serving: 'saved meal', ...roundAll(total) })} className="btn-ghost !py-1.5 !px-3 text-xs">Log</button>
-          </Card>
-        )
-      })}
     </div>
   )
 }
