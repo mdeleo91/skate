@@ -1,14 +1,16 @@
 import { useMemo, useRef, useState, useLayoutEffect } from 'react'
 import Icon from './icons'
 import {
-  TILE, lonToWorldX, latToWorldY, fitZoom, trackBounds, segmentSpeeds, speedColor,
+  TILE, lonToWorldX, latToWorldY, fitZoom, trackBounds, segmentSpeeds, speedColor, surfaceColor,
 } from '../lib/track'
 
 // Street-tile map with a speed-colored route line. Tiles come from
 // OpenStreetMap (free; attribution rendered below) and are CSS-filtered to
 // match the app's dark theme. If tiles can't load (offline), the route still
 // renders on the dark background — the data never depends on the imagery.
-export default function TrackMap({ points, height = 260, className = '' }) {
+// colorBy: 'speed' (default) grades the line by pace; 'surface' grades it by
+// accelerometer roughness — green smooth pavement, orange rough.
+export default function TrackMap({ points, height = 260, className = '', colorBy = 'speed' }) {
   const ref = useRef(null)
   const [width, setWidth] = useState(0)
 
@@ -33,15 +35,26 @@ export default function TrackMap({ points, height = 260, className = '' }) {
       y: latToWorldY(p.lat, z) - originY,
     }))
 
-    const speeds = segmentSpeeds(points)
     let segs
-    if (speeds) {
-      const lo = Math.min(...speeds)
-      const hi = Math.max(...speeds)
-      segs = speeds.map((v, i) => ({
-        x1: px[i].x, y1: px[i].y, x2: px[i + 1].x, y2: px[i + 1].y,
-        color: speedColor(v, lo, hi),
-      }))
+    if (colorBy === 'surface') {
+      const hasR = points.some((p) => p.r != null)
+      if (hasR) {
+        segs = points.slice(1).map((p, i) => ({
+          x1: px[i].x, y1: px[i].y, x2: px[i + 1].x, y2: px[i + 1].y,
+          color: surfaceColor(p.r ?? points[i].r),
+        }))
+      }
+    }
+    if (!segs) {
+      const speeds = segmentSpeeds(points)
+      if (speeds) {
+        const lo = Math.min(...speeds)
+        const hi = Math.max(...speeds)
+        segs = speeds.map((v, i) => ({
+          x1: px[i].x, y1: px[i].y, x2: px[i + 1].x, y2: px[i + 1].y,
+          color: speedColor(v, lo, hi),
+        }))
+      }
     }
 
     const tiles = []
@@ -62,7 +75,7 @@ export default function TrackMap({ points, height = 260, className = '' }) {
     }
 
     return { px, segs, tiles }
-  }, [points, width, height])
+  }, [points, width, height, colorBy])
 
   if (!points || points.length < 2) {
     return (

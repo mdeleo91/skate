@@ -6,7 +6,7 @@ import Icon from '../components/icons'
 import TrackMap from '../components/TrackMap'
 import { getSkateType } from '../lib/skateTypes'
 import { fmtDuration, fmtPace } from '../lib/calc'
-import { computeSplits } from '../lib/track'
+import { computeSplits, terrainStats } from '../lib/track'
 
 const TABS = ['Overview', 'Splits', 'Map']
 
@@ -15,6 +15,7 @@ export default function SkateDetail() {
   const nav = useNavigate()
   const data = useData()
   const [tab, setTab] = useState('Overview')
+  const [mapColor, setMapColor] = useState('speed')
   const [renaming, setRenaming] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -57,13 +58,19 @@ export default function SkateDetail() {
     } catch { /* user cancelled */ }
   }
 
+  const terrain = w.terrain || terrainStats(w.route)
   const rows = [
     ...(w.miles > 0 ? [
-      ['Avg Speed', `${w.avgSpeed} mph`],
+      ['Avg Speed', w.movingSec != null ? `${w.avgSpeed} mph moving` : `${w.avgSpeed} mph`],
       ['Max Speed', `${w.topSpeed} mph`],
       ['Elevation Gain', `${w.elevation} ft`],
-      ['Pace', fmtPace(w.minutes, w.miles)],
+      ['Pace', fmtPace((w.movingSec ?? w.minutes * 60) / 60, w.miles)],
     ] : []),
+    ...(w.movingSec != null ? [
+      ['Moving Time', fmtDuration(w.movingSec)],
+      ['Downtime', fmtDuration(w.stoppedSec ?? Math.max(0, durationSec - w.movingSec))],
+    ] : []),
+    ...(terrain ? [['Terrain', `${terrain.smoothPct}% smooth · ${terrain.roughPct}% rough`]] : []),
     ...(w.avgHr ? [['Avg Heart Rate', `${w.avgHr} bpm`]] : []),
     ['Source', w.source === 'gps' ? 'GPS' : w.source === 'demo' ? 'Demo mode' : w.source === 'seed' ? 'Sample data' : 'Manual entry'],
   ]
@@ -202,13 +209,27 @@ export default function SkateDetail() {
 
         {tab === 'Map' && (
           <div className="flex-1">
-            <TrackMap points={w.route} height={Math.round(window.innerHeight * 0.62)} className="!rounded-none" />
+            <TrackMap points={w.route} colorBy={mapColor} height={Math.round(window.innerHeight * 0.56)} className="!rounded-none" />
+            {terrain && (
+              <div className="flex gap-1.5 px-4 pt-3">
+                {[['speed', 'Speed'], ['surface', 'Surface']].map(([k, l]) => (
+                  <button key={k} onClick={() => setMapColor(k)}
+                    className={`chip !px-3 !py-1.5 ${mapColor === k ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-3 px-4 py-4">
               <BigStat value={w.miles ? w.miles.toFixed(2) : '—'} unit="miles" />
               <BigStat value={w.avgSpeed || '—'} unit="avg mph" className="border-x border-white/10" />
               <BigStat value={w.elevation} unit="ft gain" />
             </div>
-            <p className="px-4 text-xs text-slate-500">Line color is speed — green is easy, orange is flying.</p>
+            <p className="px-4 text-xs text-slate-500">
+              {mapColor === 'surface'
+                ? 'Line color is pavement quality from phone vibration — green smooth, orange rough.'
+                : 'Line color is speed — green is easy, orange is flying.'}
+            </p>
           </div>
         )}
       </div>

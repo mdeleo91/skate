@@ -26,6 +26,25 @@ export function speedColor(mph, min, max) {
   return `hsl(${hue}, 85%, 55%)`
 }
 
+// ---- surface roughness (accelerometer vibration RMS, m/s²) ---------------
+// Above this 1-second RMS, pavement reads as rough chip-seal / bad asphalt.
+export const ROUGH_RMS = 2.2
+
+export function surfaceColor(r) {
+  if (r == null) return '#64748b' // no data — neutral slate
+  const t = Math.max(0, Math.min(1, (r - 1) / 3)) // 1 m/s² smooth → 4 m/s² brutal
+  const hue = 150 - t * 130
+  return `hsl(${hue}, 85%, 55%)`
+}
+
+// Share of the trace with vibration data that reads rough vs smooth.
+export function terrainStats(route) {
+  const rs = (route || []).map((p) => p.r).filter((v) => v != null)
+  if (rs.length < 5) return null
+  const roughPct = Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100)
+  return { roughPct, smoothPct: 100 - roughPct }
+}
+
 // ---- per-mile splits ------------------------------------------------------
 // Returns [{ mile, seconds, mph, partial }] — the last entry may be a
 // partial mile. Needs timestamps; returns [] without them.
