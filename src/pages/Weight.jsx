@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
-import { Card, SectionTitle, Sparkline, Stat, Bar, Modal, EmptyState } from '../components/ui'
-import { bmiLabel, todayISO } from '../lib/calc'
+import { Card, SectionTitle, Sparkline, Stat, Bar, EmptyState } from '../components/ui'
+import WeighInModal from '../components/WeighInModal'
+import { bmiLabel } from '../lib/calc'
 
 export default function Weight() {
   const data = useData()
@@ -13,7 +14,6 @@ export default function Weight() {
 
   const series = d.weights.slice(-range)
   const values = series.map((w) => w.weightLb)
-  const latest = d.weights[d.weights.length - 1]
 
   if (!d.hasWeights) {
     return (
@@ -34,11 +34,10 @@ export default function Weight() {
           <SectionTitle>How this page will work</SectionTitle>
           <p className="text-sm text-slate-400 leading-relaxed">
             Weigh in weekly, same time of day. Skate plots every entry but draws a dashed regression
-            line through them — that line is the one to watch. You'll also be able to track body fat,
-            waist, hips and chest, which often move when the scale stubbornly refuses to.
+            line through them — that line is the one to watch, not any single morning's number.
           </p>
         </Card>
-        <LogModal open={open} onClose={() => setOpen(false)} />
+        <WeighInModal open={open} onClose={() => setOpen(false)} />
       </div>
     )
   }
@@ -104,23 +103,12 @@ export default function Weight() {
         <Stat label="Weekly Change" value={`${d.lastWeek >= 0 ? '−' : '+'}${Math.abs(d.lastWeek).toFixed(1)} lb`} accent={d.lastWeek >= 0 ? 'text-volt-400' : 'text-ember-400'} />
         <Stat label="Avg Weekly Loss" value={`${d.avgWeeklyLoss} lb`} sub="since you started" />
         <Stat label="BMI" value={d.bmiValue ? d.bmiValue.toFixed(1) : '—'} sub={bmiLabel(d.bmiValue)} />
-        <Stat label="Body Fat" value={latest?.bodyFat ? `${latest.bodyFat}%` : '—'} sub="optional" />
+        <Stat
+          label="To Goal"
+          value={profile.goalWeightLb ? `${Math.max(0, d.currentWeight - profile.goalWeightLb).toFixed(1)} lb` : '—'}
+          sub={profile.goalWeightLb ? `goal ${profile.goalWeightLb} lb` : 'no goal set'}
+        />
       </div>
-
-      <Card>
-        <SectionTitle>Measurements</SectionTitle>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          {[['Waist', latest?.waist], ['Hips', latest?.hip], ['Chest', latest?.chest]].map(([k, v]) => (
-            <div key={k} className="card-tight">
-              <div className="text-[10px] uppercase tracking-wider text-slate-500">{k}</div>
-              <div className="font-display text-xl font-bold text-white tabular-nums">{v ? `${v}"` : '—'}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-slate-500 mt-3">
-          Measurements move when the scale stalls. If you're skating hard, that's often muscle doing its job.
-        </p>
-      </Card>
 
       <Card>
         <SectionTitle>Entries</SectionTitle>
@@ -137,50 +125,8 @@ export default function Weight() {
         </div>
       </Card>
 
-      <LogModal open={open} onClose={() => setOpen(false)} />
+      <WeighInModal open={open} onClose={() => setOpen(false)} />
     </div>
   )
 }
 
-function LogModal({ open, onClose }) {
-  const data = useData()
-  const [f, setF] = useState({ date: todayISO(), weightLb: '', bodyFat: '', waist: '', hip: '', chest: '' })
-  if (!open) return null
-  const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
-  return (
-    <Modal open onClose={onClose} title="Log a weigh-in">
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Date</label><input type="date" className="input" value={f.date} onChange={set('date')} /></div>
-          <div><label className="label">Weight (lb)</label><input type="number" step="0.1" className="input" placeholder={String(data.d.currentWeight)} value={f.weightLb} onChange={set('weightLb')} /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Body Fat % (opt)</label><input type="number" step="0.1" className="input" value={f.bodyFat} onChange={set('bodyFat')} /></div>
-          <div><label className="label">Waist (in)</label><input type="number" step="0.1" className="input" value={f.waist} onChange={set('waist')} /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Hips (in)</label><input type="number" step="0.1" className="input" value={f.hip} onChange={set('hip')} /></div>
-          <div><label className="label">Chest (in)</label><input type="number" step="0.1" className="input" value={f.chest} onChange={set('chest')} /></div>
-        </div>
-        <button
-          className="btn-primary w-full"
-          disabled={!f.weightLb}
-          onClick={() => {
-            data.addWeight({
-              date: f.date,
-              weightLb: +f.weightLb,
-              bodyFat: f.bodyFat ? +f.bodyFat : undefined,
-              waist: f.waist ? +f.waist : undefined,
-              hip: f.hip ? +f.hip : undefined,
-              chest: f.chest ? +f.chest : undefined,
-            })
-            onClose()
-          }}
-        >
-          Save entry
-        </button>
-        <p className="text-xs text-slate-500 text-center">Weigh in weekly, same time of day. Daily is noise.</p>
-      </div>
-    </Modal>
-  )
-}

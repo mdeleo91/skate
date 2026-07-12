@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
 import Icon from '../components/icons'
@@ -7,6 +8,7 @@ import { DRINKS } from '../lib/drinks'
 import { searchOpenFoodFacts } from '../lib/foodSearch'
 import { searchCocktails } from '../lib/cocktailSearch'
 import BarcodeScanner from '../components/BarcodeScanner'
+import WeighInModal from '../components/WeighInModal'
 import { todayISO } from '../lib/calc'
 
 const TABS = ['Today', 'History']
@@ -80,8 +82,9 @@ export default function Nutrition() {
 }
 
 function TodayTab() {
-  const { d, meals, deleteMeal, addWater, profile, favorites } = useData()
+  const { d, meals, deleteMeal, addWater, profile, favorites, weights } = useData()
   const [pick, setPick] = useState(null)
+  const [weighIn, setWeighIn] = useState(false)
   const today = todayISO()
   const todays = meals.filter((m) => m.date === today)
   const M = d.macrosToday
@@ -132,6 +135,34 @@ function TodayTab() {
         </div>
       </Card>
 
+      <Card>
+        <SectionTitle
+          action={d.hasWeights ? <Link to="/weight" className="text-xs text-volt-400 font-semibold">Details</Link> : null}
+        >
+          <Icon name="monitor_weight" size={15} className="mr-1.5 text-volt-400" />Weigh-In
+        </SectionTitle>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            {d.hasWeights ? (
+              <>
+                <div className="font-display text-3xl font-bold text-white tabular-nums">
+                  {d.currentWeight.toFixed(1)}<span className="text-base text-slate-500 ml-1">lb</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  last weigh-in {weights[weights.length - 1].date}
+                  {d.lbsLost > 0 && <span className="text-volt-400"> · {d.lbsLost.toFixed(1)} lb down</span>}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-400">
+                No weigh-ins yet. One number, whenever you're ready.
+              </div>
+            )}
+          </div>
+          <button onClick={() => setWeighIn(true)} className="btn-primary !px-4 shrink-0">+ Weigh in</button>
+        </div>
+      </Card>
+
       {favs.length > 0 && (
         <Card>
           <SectionTitle><Icon name="star_filled" size={15} className="mr-1.5 text-volt-400" />Favorite Foods</SectionTitle>
@@ -171,6 +202,7 @@ function TodayTab() {
       })}
 
       <AddFoodModal food={pick} onClose={() => setPick(null)} />
+      <WeighInModal open={weighIn} onClose={() => setWeighIn(false)} />
     </div>
   )
 }
