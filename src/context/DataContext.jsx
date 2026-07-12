@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { seedWorkouts, seedWeights, seedGear, blankProfile } from '../lib/seed'
 import {
   calorieBudget, macroTargets, computeStreak, longestStreak, todayISO, isoDay, bmi,
@@ -83,27 +84,97 @@ function migrate(saved, email) {
   return { ...saved, version: 2, workouts: realWorkouts, isSample: false }
 }
 
+// Nothing the user logged should die with the phone. For real (Supabase)
+// accounts the whole state blob syncs to a per-user row: pulled and
+// reconciled at sign-in, pushed (debounced) after every change. localStorage
+// stays the source of truth for instant loads and offline use. Demo accounts
+// remain local-only. Photos never sync — the app promises they stay on the
+// device, and multi-megabyte images don't belong in every sync payload.
+const cloudActive = (user) => isSupabaseConfigured && user && !user.demo
+
+const isBlank = (s) => !s || (
+  s.workouts.length === 0 && s.meals.length === 0 && s.weights.length === 0 &&
+  s.gear.length === 0 && (s.savedMeals || []).length === 0
+)
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [state, setState] = useState(null)
+  const [sync, setSync] = useState({ status: 'idle', at: null })
+  const pulledFor = useRef(null) // user id whose cloud state we've reconciled
 
   useEffect(() => {
-    if (!user) return setState(null)
+    if (!user) {
+      setState(null)
+      pulledFor.current = null
+      return
+    }
+    let local = null
     const raw = localStorage.getItem(keyFor(user))
     if (raw) {
-      try {
-        setState(migrate(JSON.parse(raw), user.email))
-        return
-      } catch { /* corrupt payload — fall through to a clean account */ }
+      try { local = migrate(JSON.parse(raw), user.email) } catch { /* corrupt — treat as absent */ }
     }
-    setState(emptyState(user.email))
+    setState(local || emptyState(user.email))
+
+    if (!cloudActive(user)) return
+    let cancelled = false
+    ;(async () => {
+      setSync({ status: 'syncing', at: null })
+      try {
+        const { data: rows, error } = await supabase
+          .from('skate_state')
+          .select('data, updated_at')
+          .eq('user_id', user.id)
+          .limit(1)
+        if (cancelled) return
+        if (error) throw error
+        const row = rows?.[0]
+        const remote = row?.data ? migrate(row.data, user.email) : null
+        const localStamp = local?.updatedAt ?? 0
+        const remoteStamp = remote?.updatedAt ?? (row ? Date.parse(row.updated_at) : 0)
+
+        pulledFor.current = user.id
+        if (remote && (isBlank(local) || remoteStamp > localStamp)) {
+          // Cloud wins — but photos are device-local, keep whatever is here.
+          setState({ ...remote, photos: local?.photos || [] })
+        } else {
+          // Local wins (or cloud is empty): nudge state so the push effect
+          // uploads it now that reconciliation is done.
+          setState((s) => (s ? { ...s } : s))
+        }
+        setSync({ status: 'ok', at: Date.now() })
+      } catch {
+        if (!cancelled) setSync({ status: 'error', at: null })
+      }
+    })()
+    return () => { cancelled = true }
   }, [user])
 
   useEffect(() => {
-    if (user && state) localStorage.setItem(keyFor(user), JSON.stringify(state))
+    if (!user || !state) return
+    localStorage.setItem(keyFor(user), JSON.stringify(state))
+    if (!cloudActive(user)) return
+    // Don't push until the sign-in pull has reconciled — otherwise a stale
+    // local copy could briefly clobber a newer cloud row.
+    if (pulledFor.current !== user.id) return
+    const t = setTimeout(async () => {
+      try {
+        const { photos, ...cloudState } = state // photos stay on the device
+        const { error } = await supabase.from('skate_state').upsert({
+          user_id: user.id,
+          data: cloudState,
+          updated_at: new Date().toISOString(),
+        })
+        setSync(error ? { status: 'error', at: null } : { status: 'ok', at: Date.now() })
+      } catch {
+        setSync({ status: 'error', at: null })
+      }
+    }, 1500) // debounce: a burst of taps becomes one write
+    return () => clearTimeout(t)
   }, [user, state])
 
-  const update = useCallback((fn) => setState((s) => (s ? fn(s) : s)), [])
+  // Every mutation stamps updatedAt — it's how two devices decide who's newer.
+  const update = useCallback((fn) => setState((s) => (s ? { ...fn(s), updatedAt: Date.now() } : s)), [])
 
   // ---- mutations ------------------------------------------------------
   const api = useMemo(() => ({
@@ -205,14 +276,16 @@ export function DataProvider({ children }) {
       },
     })),
 
-    loadSampleData: () => setState(sampleState(user?.email)),
-    clearAll: () => setState(emptyState(user?.email)),
+    loadSampleData: () => setState({ ...sampleState(user?.email), updatedAt: Date.now() }),
+    clearAll: () => setState({ ...emptyState(user?.email), updatedAt: Date.now() }),
   }), [update, user])
 
   const derived = useMemo(() => (state ? computeDerived(state) : null), [state])
 
+  const cloud = { enabled: cloudActive(user), ...sync }
+
   if (!state) return <DataCtx.Provider value={null}>{children}</DataCtx.Provider>
-  return <DataCtx.Provider value={{ ...state, ...api, d: derived }}>{children}</DataCtx.Provider>
+  return <DataCtx.Provider value={{ ...state, ...api, d: derived, cloud }}>{children}</DataCtx.Provider>
 }
 
 // ---- derived stats ----------------------------------------------------

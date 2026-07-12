@@ -24,6 +24,11 @@ jobs:
 
       - name: Build web app
         run: npm run build
+        env:
+          # Set these repo secrets to bake Supabase auth + cloud sync into the
+          # APK. Absent, the app runs in local-only demo mode.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Sync Capacitor
         run: npx cap sync android

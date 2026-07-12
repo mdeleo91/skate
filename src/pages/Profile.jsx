@@ -106,7 +106,25 @@ export default function Profile() {
         <SectionTitle>Account & Data</SectionTitle>
         <div className="text-sm text-slate-400 space-y-1 mb-4">
           <div>Auth: <span className="text-slate-200">{isSupabaseConfigured ? 'Supabase (email + password)' : 'Demo mode (local only)'}</span></div>
-          <div>Data: <span className="text-slate-200">stored locally in this browser</span></div>
+          <div>
+            Data:{' '}
+            {data.cloud.enabled ? (
+              <span className={data.cloud.status === 'error' ? 'text-ember-400' : 'text-slate-200'}>
+                {data.cloud.status === 'ok' && `synced to your account · ${new Date(data.cloud.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+                {data.cloud.status === 'syncing' && 'syncing…'}
+                {data.cloud.status === 'error' && "couldn't reach the cloud — changes are safe on this device and sync when you're back online"}
+                {data.cloud.status === 'idle' && 'synced to your account'}
+              </span>
+            ) : (
+              <span className="text-slate-200">stored locally on this device only</span>
+            )}
+          </div>
+          {data.cloud.enabled && (
+            <div className="text-xs text-slate-500">
+              Sign in on any phone and your skates, meals and weigh-ins come with you. Progress
+              photos stay on the device they were taken on.
+            </div>
+          )}
           {data.isSample && (
             <div className="chip bg-ember-500/15 text-ember-400 mt-1">Sample data loaded</div>
           )}
