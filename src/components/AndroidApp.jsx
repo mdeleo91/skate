@@ -1,0 +1,101 @@
+import { useState } from 'react'
+import { Card, SectionTitle } from './ui'
+import Icon from './icons'
+import { isNativeApp } from '../lib/geo'
+import { BUILD_ID, APK_URL, fetchLatestAndroidBuild } from '../lib/appUpdate'
+
+// One card, two jobs:
+//  - In a browser: "get the Android app" with a direct APK download.
+//  - Inside the APK: show the installed build and check for/download updates.
+//    Opening the new APK installs over the old one — data is kept.
+export default function AndroidApp() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  if (isNativeApp) return <UpdateCard />
+  if (isIOS) return null // an APK is no use on an iPhone
+  return <InstallCard />
+}
+
+function InstallCard() {
+  return (
+    <Card>
+      <SectionTitle><Icon name="android" size={15} className="mr-1.5 text-volt-400" />Skate for Android</SectionTitle>
+      <p className="text-sm text-slate-400 leading-relaxed">
+        The Android app tracks skates with the <span className="text-slate-200">screen off</span> —
+        GPS runs as a background service, so you can lock the phone and pocket it. The browser
+        version pauses when the phone sleeps.
+      </p>
+      <a href={APK_URL} className="btn-primary w-full mt-3.5">
+        <Icon name="download" size={17} /> Download the Android app
+      </a>
+      <p className="text-xs text-slate-500 mt-3">
+        Open the downloaded file to install. Android will ask you to allow installs from your
+        browser — that's normal for apps outside the Play Store. Your data stays on the device.
+      </p>
+    </Card>
+  )
+}
+
+function UpdateCard() {
+  const [state, setState] = useState({ status: 'idle' }) // idle | checking | current | available | unknown | error
+
+  async function check() {
+    setState({ status: 'checking' })
+    try {
+      const latest = await fetchLatestAndroidBuild()
+      if (!latest.sha || BUILD_ID === 'dev') setState({ status: 'unknown', latest })
+      else if (latest.sha === BUILD_ID) setState({ status: 'current', latest })
+      else setState({ status: 'available', latest })
+    } catch {
+      setState({ status: 'error' })
+    }
+  }
+
+  const latestDate = state.latest?.publishedAt
+    ? new Date(state.latest.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : null
+
+  return (
+    <Card>
+      <SectionTitle action={<span className="text-xs text-slate-500 tabular-nums">build {BUILD_ID}</span>}>
+        <Icon name="android" size={15} className="mr-1.5 text-volt-400" />App Updates
+      </SectionTitle>
+
+      {state.status === 'idle' && (
+        <>
+          <p className="text-sm text-slate-400 mb-3">
+            New features ship often. Updating installs over this version — all your data stays.
+          </p>
+          <button onClick={check} className="btn-ghost w-full">Check for updates</button>
+        </>
+      )}
+      {state.status === 'checking' && <div className="text-sm text-slate-400 py-2">Checking the latest build…</div>}
+      {state.status === 'current' && (
+        <>
+          <p className="text-sm text-volt-400 mb-3">
+            <Icon name="check_circle" size={15} className="mr-1" />You're on the latest build{latestDate ? ` (${latestDate})` : ''}.
+          </p>
+          <button onClick={check} className="btn-ghost w-full !py-1.5 text-xs">Check again</button>
+        </>
+      )}
+      {(state.status === 'available' || state.status === 'unknown') && (
+        <>
+          <p className="text-sm text-slate-400 mb-3">
+            {state.status === 'available'
+              ? <>Update available — build <span className="text-slate-200 tabular-nums">{state.latest.sha}</span>{latestDate ? `, published ${latestDate}` : ''}.</>
+              : 'Couldn’t compare versions — you can grab the latest build anyway.'}
+            {' '}Open the downloaded file and Android installs it over this one; your data stays.
+          </p>
+          <a href={state.latest?.url || APK_URL} target="_blank" rel="noreferrer" className="btn-primary w-full">
+            <Icon name="download" size={17} /> Download update
+          </a>
+        </>
+      )}
+      {state.status === 'error' && (
+        <>
+          <p className="text-sm text-ember-400 mb-3">Couldn't reach GitHub — check your connection.</p>
+          <button onClick={check} className="btn-ghost w-full">Try again</button>
+        </>
+      )}
+    </Card>
+  )
+}

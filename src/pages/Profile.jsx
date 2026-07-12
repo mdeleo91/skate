@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { Card, SectionTitle, Stat } from '../components/ui'
 import InstallApp from '../components/InstallApp'
+import AndroidApp from '../components/AndroidApp'
 import { calorieBudget, macroTargets, bmiLabel } from '../lib/calc'
 import { isSupabaseConfigured } from '../lib/supabase'
 
@@ -98,6 +99,7 @@ export default function Profile() {
         </p>
       </Card>
 
+      <AndroidApp />
       <InstallApp />
 
       <Card>
