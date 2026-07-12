@@ -3,7 +3,9 @@ import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
 import Icon from '../components/icons'
 import { FOODS, MEAL_SLOTS } from '../lib/foods'
+import { DRINKS } from '../lib/drinks'
 import { searchOpenFoodFacts } from '../lib/foodSearch'
+import { searchCocktails } from '../lib/cocktailSearch'
 import BarcodeScanner from '../components/BarcodeScanner'
 import { todayISO } from '../lib/calc'
 
@@ -34,7 +36,7 @@ export default function Nutrition() {
         <Icon name="search" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
         <input
           className="input !pl-10 !pr-10"
-          placeholder="Search any food — pasta, tofu, cereal…"
+          placeholder="Search any food or drink — pasta, tofu, margarita…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') setSubmitSignal((s) => s + 1) }}
@@ -84,7 +86,7 @@ function TodayTab() {
   const todays = meals.filter((m) => m.date === today)
   const M = d.macrosToday
   const T = d.macros
-  const favs = FOODS.filter((f) => favorites.includes(f.id))
+  const favs = [...FOODS, ...DRINKS].filter((f) => favorites.includes(f.id))
 
   return (
     <div className="space-y-4">
@@ -242,22 +244,33 @@ function AddFoodModal({ food, onClose }) {
 function SearchResults({ q, submitSignal }) {
   const [pick, setPick] = useState(null)
   const [quickAdd, setQuickAdd] = useState(false)
-  const [online, setOnline] = useState({ status: 'idle', query: '', items: [] })
+  const [online, setOnline] = useState({ status: 'idle', query: '', items: [], cocktails: [] })
+  const needle = q.trim().toLowerCase()
   const results = useMemo(
-    () => FOODS.filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(q.trim().toLowerCase())),
-    [q]
+    () => [...FOODS, ...DRINKS].filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(needle)),
+    [needle]
   )
 
   async function searchOnline() {
     const query = q.trim()
     if (query.length < 2) return
-    setOnline({ status: 'loading', query, items: [] })
-    try {
-      const items = await searchOpenFoodFacts(query)
-      setOnline({ status: 'done', query, items })
-    } catch {
-      setOnline({ status: 'error', query, items: [] })
+    setOnline({ status: 'loading', query, items: [], cocktails: [] })
+    // Two sources in parallel: packaged foods (Open Food Facts) and cocktail
+    // recipes (TheCocktailDB, calories estimated from the ingredients).
+    const [foods, cocktails] = await Promise.allSettled([
+      searchOpenFoodFacts(query),
+      searchCocktails(query),
+    ])
+    if (foods.status === 'rejected' && cocktails.status === 'rejected') {
+      setOnline({ status: 'error', query, items: [], cocktails: [] })
+      return
     }
+    setOnline({
+      status: 'done',
+      query,
+      items: foods.status === 'fulfilled' ? foods.value : [],
+      cocktails: cocktails.status === 'fulfilled' ? cocktails.value : [],
+    })
   }
 
   // Enter in the search bar above fires the online search from here.
@@ -311,8 +324,20 @@ function SearchResults({ q, submitSignal }) {
                   )}
                 </>
               )
-              : <div className="text-sm text-slate-500">No online matches for “{online.query}”.</div>
+              : <div className="text-sm text-slate-500">No packaged-food matches for “{online.query}”.</div>
           )}
+        </Card>
+      )}
+
+      {online.status === 'done' && online.cocktails.length > 0 && (
+        <Card>
+          <SectionTitle action={<span className="text-xs text-slate-500">via TheCocktailDB</span>}>
+            <Icon name="local_bar" size={15} className="mr-1.5 text-surge-400" />Cocktails
+          </SectionTitle>
+          <p className="text-xs text-slate-500 mb-2">
+            Calories estimated from each recipe's actual ingredients — a heavy pour runs higher.
+          </p>
+          <FoodList foods={online.cocktails} onPick={setPick} />
         </Card>
       )}
 
