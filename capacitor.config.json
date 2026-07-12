@@ -1,0 +1,8 @@
+{
+  "appId": "app.skate.tracker",
+  "appName": "Skate",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

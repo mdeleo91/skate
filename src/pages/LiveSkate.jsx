@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
 import { ROUGH_RMS } from '../lib/track'
+import { isNativeApp, startLocationWatch } from '../lib/geo'
 import { RouteMap, Modal } from '../components/ui'
 import Icon from '../components/icons'
 
@@ -20,8 +21,6 @@ export default function LiveSkate() {
   const [status, setStatus] = useState('idle') // idle | running | paused | done
   const [mode, setMode] = useState(null)       // 'gps' | 'demo'
   const [gpsError, setGpsError] = useState(null)
-  const [elapsed, setElapsed] = useState(0)
-  const [movingSec, setMovingSec] = useState(0)
   const [meters, setMeters] = useState(0)
   const [speed, setSpeed] = useState(0)        // mph
   const [topSpeed, setTopSpeed] = useState(0)
@@ -32,8 +31,9 @@ export default function LiveSkate() {
   const [laps, setLaps] = useState([])
   const [saveOpen, setSaveOpen] = useState(false)
   const [name, setName] = useState('')
+  const [, setNowTick] = useState(0) // 1 Hz re-render while running
 
-  const watchId = useRef(null)
+  const watcher = useRef(null)      // { stop } from startLocationWatch
   const statusRef = useRef('idle')
   const speedRef = useRef(0)
   const lastFix = useRef(null)      // { lat, lon, t } of last accepted GPS fix
@@ -42,14 +42,33 @@ export default function LiveSkate() {
   const demoRef = useRef({ t: 0 })
   const startedAt = useRef(null)
   const hrSamples = useRef([])
-  const motionBuf = useRef([])      // accelerometer magnitudes since last tick
+  const motionBuf = useRef([])
   const motionSeen = useRef(false)
-  const roughRms = useRef(null)     // last 1s vibration RMS
+  const roughRms = useRef(null)
   const motionHandler = useRef(null)
   const wakeLock = useRef(null)
 
+  // Time is wall-clock, not counted timer ticks: browsers throttle timers
+  // when the screen is off or the tab is hidden, but Date.now() and GPS fix
+  // timestamps never lie. This is what keeps totals honest in the APK when
+  // the phone is asleep and only the location service is feeding us.
+  const startTs = useRef(null)   // ms when tracking started
+  const pausedMs = useRef(0)     // accumulated paused time
+  const pauseStart = useRef(null)
+  const doneAt = useRef(null)
+  const movingMs = useRef(0)     // accumulated moving time
+
   statusRef.current = status
   speedRef.current = speed
+
+  function elapsedSec() {
+    if (startTs.current == null) return 0
+    const end = doneAt.current ?? pauseStart.current ?? Date.now()
+    return Math.max(0, Math.floor((end - startTs.current - pausedMs.current) / 1000))
+  }
+  const elapsed = elapsedSec()
+  const movingSec = Math.floor(movingMs.current / 1000)
+  const stoppedSec = Math.max(0, elapsed - movingSec)
 
   const weightLb = data?.profile?.weightLb || 175
   const miles = milesFromMeters(meters)
@@ -57,15 +76,12 @@ export default function LiveSkate() {
   const movingMin = movingSec / 60
   const avgSpeed = movingMin > 0 ? miles / (movingMin / 60) : 0
   const calories = caloriesForSkate({ typeId, minutes: movingMin, avgSpeedMph: avgSpeed, weightLb })
-  const stoppedSec = Math.max(0, elapsed - movingSec)
 
-  // ---- clock: elapsed, moving time, and the 1 Hz roughness sample ----------
+  // ---- 1 Hz UI tick + roughness sample --------------------------------------
   useEffect(() => {
     if (status !== 'running') return
     const i = setInterval(() => {
-      setElapsed((e) => e + 1)
-      if (speedRef.current >= MOVING_MPH) setMovingSec((m) => m + 1)
-      // Vibration RMS over the last second of accelerometer samples.
+      setNowTick((n) => n + 1)
       const buf = motionBuf.current
       if (buf.length > 3) {
         const rms = Math.sqrt(buf.reduce((a, v) => a + v * v, 0) / buf.length)
@@ -80,7 +96,7 @@ export default function LiveSkate() {
     return () => clearInterval(i)
   }, [status, mode])
 
-  // ---- GPS ------------------------------------------------------------------
+  // ---- GPS -------------------------------------------------------------------
   const handlePosition = useCallback((pos) => {
     if (statusRef.current !== 'running') return // paused: freeze everything
     const { latitude: lat, longitude: lon, altitude, speed: mps, accuracy } = pos.coords
@@ -89,20 +105,27 @@ export default function LiveSkate() {
     const p = { lat, lon, t, r: roughRms.current ?? undefined }
 
     let mph = null
+    let dtSec = null
     if (lastFix.current) {
       const dm = distanceMeters(lastFix.current, p)
-      const dt = (t - lastFix.current.t) / 1000
+      dtSec = (t - lastFix.current.t) / 1000
       if (dm > 1 && dm < 120) {
         setMeters((m) => m + dm)
         // Some phones never report coords.speed in the browser — derive it
         // from consecutive fixes so the speedometer works everywhere.
-        if (dt > 0.4) mph = mphFromMps(dm / dt)
+        if (dtSec > 0.4) mph = mphFromMps(dm / dtSec)
       }
     }
     if (mps != null && mps >= 0) mph = mphFromMps(mps)
     if (mph != null && mph < 45) { // >45 mph on skates is a GPS teleport, not you
       setSpeed(mph)
+      speedRef.current = mph
       setTopSpeed((v) => Math.max(v, mph))
+    }
+    // Moving time accrues from fix-to-fix gaps, so it stays correct even when
+    // the screen is off and no timers are running — only the GPS service is.
+    if (dtSec != null && dtSec > 0 && dtSec <= 15 && (mph ?? speedRef.current) >= MOVING_MPH) {
+      movingMs.current += dtSec * 1000
     }
     lastFix.current = p
     setPoints((ps) => [...ps, p])
@@ -120,7 +143,7 @@ export default function LiveSkate() {
     }
   }, [])
 
-  // ---- accelerometer: surface roughness ------------------------------------
+  // ---- accelerometer: surface roughness --------------------------------------
   function startMotion() {
     const handler = (e) => {
       if (statusRef.current !== 'running') return
@@ -141,9 +164,6 @@ export default function LiveSkate() {
   }
 
   async function requestMotion() {
-    // iOS requires an explicit permission call from a user gesture; Android
-    // and desktop just start delivering events (or never do — that's fine,
-    // terrain sensing silently stays off).
     try {
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         const res = await DeviceMotionEvent.requestPermission()
@@ -153,8 +173,9 @@ export default function LiveSkate() {
     } catch { /* no accelerometer access */ }
   }
 
-  // ---- wake lock: browsers pause GPS when the screen sleeps ----------------
+  // ---- wake lock (browser only — the APK's foreground service replaces it) ---
   async function acquireWakeLock() {
+    if (isNativeApp) return
     try { wakeLock.current = await navigator.wakeLock?.request('screen') } catch { /* unsupported */ }
   }
   useEffect(() => {
@@ -165,30 +186,27 @@ export default function LiveSkate() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
-  // ---- demo simulator -------------------------------------------------------
+  // ---- demo simulator ----------------------------------------------------------
   useEffect(() => {
     if (status !== 'running' || mode !== 'demo') return
     const i = setInterval(() => {
       const s = demoRef.current
       s.t += 1
       const base = type.id === 'speed' ? 15 : type.id === 'recovery' ? 8 : 11
-      // A stop every ~50s (traffic light) so downtime tracking is visible.
       const stopped = s.t % 50 < 6
       const mph = stopped ? 0 : Math.max(0, base + Math.sin(s.t / 9) * 2.6 + (Math.random() - 0.5) * 1.4)
       setSpeed(mph)
       speedRef.current = mph
       setTopSpeed((v) => Math.max(v, mph))
       setMeters((m) => m + (mph * 1609.344) / 3600)
+      if (mph >= MOVING_MPH) movingMs.current += 1000
       setElevation((e) => e + (stopped ? 0 : Math.max(0, Math.sin(s.t / 14) * 0.9)))
       const bpm = Math.round(132 + Math.sin(s.t / 11) * 12 + (Math.random() - 0.5) * 5)
       hrSamples.current.push(bpm)
       setHr(bpm)
-      // Alternating pavement quality so the surface sensor has something to say.
       const rough = s.t % 34 < 12
       roughRms.current = +(rough ? 3.1 + Math.random() * 0.8 : 1.1 + Math.random() * 0.5).toFixed(2)
       setSurface(mph >= MOVING_MPH ? (roughRms.current >= ROUGH_RMS ? 'rough' : 'smooth') : null)
-      // Advance the fake position by the simulated speed along a wandering
-      // heading, so the GPS trace agrees with the speed/distance numbers.
       s.heading = (s.heading ?? 0) + Math.sin(s.t / 15) * 0.07 + (Math.random() - 0.5) * 0.03
       const stepM = (mph * 1609.344) / 3600
       s.lat = (s.lat ?? 39.7392) + (stepM * Math.cos(s.heading)) / 111320
@@ -198,19 +216,18 @@ export default function LiveSkate() {
     return () => clearInterval(i)
   }, [status, mode, type.id])
 
-  function startGps() {
-    if (!navigator.geolocation) {
-      setGpsError('This browser has no Geolocation API.')
+  async function startGps() {
+    try {
+      watcher.current = await startLocationWatch(handlePosition, (err) =>
+        setGpsError(err?.message || 'Location unavailable — switch to demo mode to keep tracking time.'))
+    } catch (e) {
+      setGpsError(e.message)
       return startDemo()
     }
-    watchId.current = navigator.geolocation.watchPosition(
-      handlePosition,
-      (err) => setGpsError(err.message || 'Location unavailable — switch to demo mode to keep tracking time.'),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
-    )
     requestMotion()     // must happen inside this tap (iOS)
     acquireWakeLock()
     startedAt.current = new Date().toISOString()
+    startTs.current = Date.now()
     setMode('gps')
     setStatus('running')
   }
@@ -218,15 +235,14 @@ export default function LiveSkate() {
   function startDemo() {
     acquireWakeLock()
     startedAt.current = new Date().toISOString()
+    startTs.current = Date.now()
     setMode('demo')
     setStatus('running')
   }
 
   function stopWatch() {
-    if (watchId.current != null) {
-      navigator.geolocation.clearWatch(watchId.current)
-      watchId.current = null
-    }
+    watcher.current?.stop()
+    watcher.current = null
   }
   function releaseWakeLock() {
     wakeLock.current?.release?.().catch(() => {})
@@ -238,26 +254,48 @@ export default function LiveSkate() {
     if (motionHandler.current) window.removeEventListener('devicemotion', motionHandler.current)
   }, [])
 
-  function pause() { setStatus('paused'); setSpeed(0); setSurface(null) }
-  function resume() { setStatus('running'); acquireWakeLock() }
-  function finish() { stopWatch(); releaseWakeLock(); setStatus('done'); setSpeed(0); setSaveOpen(true) }
+  function pause() {
+    pauseStart.current = Date.now()
+    setStatus('paused')
+    setSpeed(0)
+    speedRef.current = 0
+    setSurface(null)
+  }
+  function resume() {
+    if (pauseStart.current != null) {
+      pausedMs.current += Date.now() - pauseStart.current
+      pauseStart.current = null
+    }
+    lastFix.current = null // don't count the paused gap as one giant GPS segment
+    setStatus('running')
+    acquireWakeLock()
+  }
+  function finish() {
+    doneAt.current = pauseStart.current ?? Date.now()
+    stopWatch()
+    releaseWakeLock()
+    setStatus('done')
+    setSpeed(0)
+    setSaveOpen(true)
+  }
   function lap() {
-    setLaps((l) => [...l, { n: l.length + 1, atSec: elapsed, miles: +miles.toFixed(2), avg: +avgSpeed.toFixed(1) }])
+    setLaps((l) => [...l, { n: l.length + 1, atSec: elapsedSec(), miles: +miles.toFixed(2), avg: +avgSpeed.toFixed(1) }])
   }
 
   function save() {
     const hrs = hrSamples.current
     const rs = points.map((p) => p.r).filter((v) => v != null)
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
+    const finalElapsed = elapsedSec()
     const id = data.addWorkout({
       date: todayISO(),
       kind: 'skate',
       typeId,
       name: name || type.name,
-      minutes: Math.max(1, Math.round(elapsed / 60)),
-      durationSec: elapsed,
+      minutes: Math.max(1, Math.round(finalElapsed / 60)),
+      durationSec: finalElapsed,
       movingSec,
-      stoppedSec,
+      stoppedSec: Math.max(0, finalElapsed - movingSec),
       startedAt: startedAt.current,
       miles: +miles.toFixed(2),
       avgSpeed: +avgSpeed.toFixed(1),
@@ -267,8 +305,6 @@ export default function LiveSkate() {
       terrain: roughPct != null ? { roughPct, smoothPct: 100 - roughPct } : undefined,
       calories,
       laps,
-      // Timestamps and roughness ride along on each point: the detail screen
-      // computes speed coloring, splits and the surface map from them.
       route: points.map((p) => ({ lat: p.lat, lon: p.lon, t: p.t, ...(p.r != null ? { r: p.r } : {}) })),
       source: mode,
     })
@@ -292,8 +328,9 @@ export default function LiveSkate() {
             <Icon name="play_arrow" size={18} /> Demo mode (simulated)
           </button>
           <p className="text-xs text-slate-500 pt-1">
-            GPS needs location permission and works best outdoors. Allowing motion access too lets
-            Skate read pavement vibration and map rough vs smooth stretches.
+            {isNativeApp
+              ? 'Tracking runs as a foreground service — it keeps recording with the screen off. Allow location and notification access when asked.'
+              : 'GPS needs location permission and works best outdoors. Allowing motion access too lets Skate read pavement vibration and map rough vs smooth stretches.'}
           </p>
           <Link to="/skate" className="block text-xs text-slate-500 hover:text-slate-300 pt-2"><Icon name="arrow_back" size={12} /> Pick a different discipline</Link>
         </div>
@@ -380,7 +417,9 @@ export default function LiveSkate() {
       </div>
       {mode === 'gps' && status === 'running' && (
         <p className="text-center text-[11px] text-slate-500 mt-2 pb-1">
-          Keep the screen on — browsers pause GPS when the phone locks.
+          {isNativeApp
+            ? 'Recording continues with the screen off — look for the notification.'
+            : 'Keep the screen on — browsers pause GPS when the phone locks.'}
         </p>
       )}
 
