@@ -120,6 +120,9 @@ export function DataProvider({ children }) {
     deleteWorkout: (id) => update((s) => ({ ...s, workouts: s.workouts.filter((w) => w.id !== id) })),
 
     addMeal: (m) => update((s) => ({ ...s, meals: [{ id: uid(), date: todayISO(), ...m }, ...s.meals] })),
+    updateMeal: (id, patch) => update((s) => ({
+      ...s, meals: s.meals.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    })),
     deleteMeal: (id) => update((s) => ({ ...s, meals: s.meals.filter((m) => m.id !== id) })),
     saveMeal: (name, items) => update((s) => ({ ...s, savedMeals: [{ id: uid(), name, items }, ...s.savedMeals] })),
     toggleFavorite: (foodId) => update((s) => ({

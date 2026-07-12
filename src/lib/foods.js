@@ -224,4 +224,4 @@ export const FOODS = [
 ]
 
 
-export const MEAL_SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks']
+export const MEAL_SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Late Night']

@@ -84,6 +84,7 @@ export default function Nutrition() {
 function TodayTab() {
   const { d, meals, deleteMeal, addWater, profile, favorites, weights } = useData()
   const [pick, setPick] = useState(null)
+  const [editMeal, setEditMeal] = useState(null)
   const [weighIn, setWeighIn] = useState(false)
   const today = todayISO()
   const todays = meals.filter((m) => m.date === today)
@@ -185,12 +186,12 @@ function TodayTab() {
               <div className="divide-y divide-white/5">
                 {items.map((m) => (
                   <div key={m.id} className="flex items-center gap-3 py-2">
-                    <div className="min-w-0 flex-1">
+                    <button onClick={() => setEditMeal(m)} className="min-w-0 flex-1 text-left hover:bg-white/[0.03] rounded-lg px-1 -mx-1 py-0.5">
                       <div className="text-sm font-medium text-slate-100 truncate">{m.name}</div>
                       <div className="text-xs text-slate-500">
                         {m.serving} · P{Math.round(m.protein)} C{Math.round(m.carbs)} F{Math.round(m.fat)}
                       </div>
-                    </div>
+                    </button>
                     <span className="text-sm tabular-nums text-slate-300">{m.calories}</span>
                     <button onClick={() => deleteMeal(m.id)} className="text-slate-600 hover:text-ember-400 text-lg leading-none">×</button>
                   </div>
@@ -202,6 +203,7 @@ function TodayTab() {
       })}
 
       <AddFoodModal food={pick} onClose={() => setPick(null)} />
+      <EditMealModal meal={editMeal} onClose={() => setEditMeal(null)} />
       <WeighInModal open={weighIn} onClose={() => setWeighIn(false)} />
     </div>
   )
@@ -220,11 +222,19 @@ function MacroBar({ label, v, g, color, invert, unit = 'g' }) {
   )
 }
 
+const DRINK_CATS = new Set(['Cocktails', 'Beer', 'Wine', 'Spirits'])
+
 function AddFoodModal({ food, onClose }) {
-  const { addMeal, favorites, toggleFavorite } = useData()
-  const [slot, setSlot] = useState('Breakfast')
-  const [qty, setQty] = useState(1)
   if (!food) return null
+  return <AddFoodForm key={food.id} food={food} onClose={onClose} />
+}
+
+function AddFoodForm({ food, onClose }) {
+  const { addMeal, favorites, toggleFavorite } = useData()
+  // Drinks land in Late Night by default — that's usually when they happen.
+  const [slot, setSlot] = useState(DRINK_CATS.has(food.cat) ? 'Late Night' : 'Breakfast')
+  const [qty, setQty] = useState(1)
+  const [date, setDate] = useState(todayISO())
   const scale = (n) => Math.round((n || 0) * qty)
   return (
     <Modal open onClose={onClose} title={food.name}>
@@ -242,6 +252,10 @@ function AddFoodModal({ food, onClose }) {
             <input type="number" step="0.5" min="0.5" className="input" value={qty} onChange={(e) => setQty(+e.target.value || 1)} />
           </div>
         </div>
+        <div>
+          <label className="label">Date</label>
+          <input type="date" max={todayISO()} className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
         <div className="card-tight grid grid-cols-4 gap-2 text-center">
           {[['Cal', scale(food.calories)], ['P', scale(food.protein)], ['C', scale(food.carbs)], ['F', scale(food.fat)]].map(([k, v]) => (
             <div key={k}>
@@ -258,7 +272,7 @@ function AddFoodModal({ food, onClose }) {
             className="btn-primary flex-1"
             onClick={() => {
               addMeal({
-                slot, name: food.name, serving: `${qty} × ${food.serving}`,
+                slot, date, name: food.name, serving: `${qty} × ${food.serving}`,
                 calories: scale(food.calories), protein: scale(food.protein), carbs: scale(food.carbs),
                 fat: scale(food.fat), fiber: scale(food.fiber), sugar: scale(food.sugar), sodium: scale(food.sodium),
               })
@@ -268,6 +282,46 @@ function AddFoodModal({ food, onClose }) {
             Add to {slot}
           </button>
         </div>
+      </div>
+    </Modal>
+  )
+}
+
+function EditMealModal({ meal, onClose }) {
+  if (!meal) return null
+  return <EditMealForm key={meal.id} meal={meal} onClose={onClose} />
+}
+
+function EditMealForm({ meal, onClose }) {
+  const { updateMeal, deleteMeal } = useData()
+  const [slot, setSlot] = useState(meal.slot)
+  const [date, setDate] = useState(meal.date)
+  return (
+    <Modal open onClose={onClose} title={meal.name}>
+      <div className="space-y-3">
+        <div className="text-sm text-slate-400">{meal.serving} · {meal.calories} cal</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Meal</label>
+            <select className="input" value={slot} onChange={(e) => setSlot(e.target.value)}>
+              {MEAL_SLOTS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <input type="date" max={todayISO()} className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+        </div>
+        <button
+          className="btn-primary w-full"
+          disabled={!date}
+          onClick={() => { updateMeal(meal.id, { slot, date }); onClose() }}
+        >
+          Save changes
+        </button>
+        <button className="btn-ghost w-full !text-ember-400" onClick={() => { deleteMeal(meal.id); onClose() }}>
+          Delete entry
+        </button>
       </div>
     </Modal>
   )
@@ -397,7 +451,7 @@ function QuickAddModal({ open, initialName, onClose }) {
 
 function QuickAddForm({ initialName, addMeal, onClose }) {
   const [f, setF] = useState({
-    name: initialName || '', slot: 'Snacks', calories: '', protein: '', carbs: '', fat: '',
+    name: initialName || '', slot: 'Snacks', date: todayISO(), calories: '', protein: '', carbs: '', fat: '',
   })
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
   const valid = f.name.trim() && f.calories !== '' && +f.calories >= 0
@@ -414,6 +468,7 @@ function QuickAddForm({ initialName, addMeal, onClose }) {
           </div>
           <div><label className="label">Calories</label><input type="number" min="0" className="input" placeholder="250" value={f.calories} onChange={set('calories')} /></div>
         </div>
+        <div><label className="label">Date</label><input type="date" max={todayISO()} className="input" value={f.date} onChange={set('date')} /></div>
         <div className="grid grid-cols-3 gap-3">
           <div><label className="label">Protein g</label><input type="number" min="0" className="input" value={f.protein} onChange={set('protein')} /></div>
           <div><label className="label">Carbs g</label><input type="number" min="0" className="input" value={f.carbs} onChange={set('carbs')} /></div>
@@ -424,7 +479,7 @@ function QuickAddForm({ initialName, addMeal, onClose }) {
           disabled={!valid}
           onClick={() => {
             addMeal({
-              slot: f.slot, name: f.name.trim(), serving: 'custom entry',
+              slot: f.slot, date: f.date, name: f.name.trim(), serving: 'custom entry',
               calories: Math.round(+f.calories), protein: Math.round(+f.protein || 0),
               carbs: Math.round(+f.carbs || 0), fat: Math.round(+f.fat || 0),
               fiber: 0, sugar: 0, sodium: 0,
@@ -462,6 +517,7 @@ function FoodList({ foods, onPick }) {
 
 function HistoryTab() {
   const { meals } = useData()
+  const [editMeal, setEditMeal] = useState(null)
   const byDate = useMemo(() => {
     const g = {}
     for (const m of meals) (g[m.date] ||= []).push(m)
@@ -477,11 +533,18 @@ function HistoryTab() {
             <span className="font-display font-bold text-white">{date}</span>
             <span className="text-sm tabular-nums text-volt-400">{items.reduce((a, m) => a + m.calories, 0)} cal</span>
           </div>
-          <div className="text-xs text-slate-400 space-y-0.5">
-            {items.map((m) => <div key={m.id}>{m.slot} — {m.name} <span className="tabular-nums text-slate-500">({m.calories})</span></div>)}
+          <div className="text-xs text-slate-400">
+            {items.map((m) => (
+              <button key={m.id} onClick={() => setEditMeal(m)}
+                className="block w-full text-left py-0.5 hover:text-slate-200 transition">
+                {m.slot} — {m.name} <span className="tabular-nums text-slate-500">({m.calories})</span>
+              </button>
+            ))}
           </div>
         </Card>
       ))}
+      <p className="text-xs text-slate-500 px-1">Tap any entry to change its date or meal.</p>
+      <EditMealModal meal={editMeal} onClose={() => setEditMeal(null)} />
     </div>
   )
 }
