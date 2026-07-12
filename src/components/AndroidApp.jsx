@@ -27,10 +27,12 @@ function InstallCard() {
       <a href={APK_URL} className="btn-primary w-full mt-3.5">
         <Icon name="download" size={17} /> Download the Android app
       </a>
-      <p className="text-xs text-slate-500 mt-3">
-        Open the downloaded file to install. Android will ask you to allow installs from your
-        browser — that's normal for apps outside the Play Store. Your data stays on the device.
-      </p>
+      <ol className="text-xs text-slate-500 mt-3 space-y-1 list-decimal list-inside leading-relaxed">
+        <li>When the download finishes, close the download sheet — it won't advance on its own.</li>
+        <li>Tap the <span className="text-slate-300">skate.apk</span> notification, or find it in the <span className="text-slate-300">Files</span> app under Downloads.</li>
+        <li>Allow installs from your browser when Android asks, then tap <span className="text-slate-300">Install</span>.</li>
+        <li>If Play Protect warns (normal outside the Play Store): More details → Install anyway.</li>
+      </ol>
     </Card>
   )
 }
