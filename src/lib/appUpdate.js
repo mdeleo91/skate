@@ -5,8 +5,24 @@
 // from (__BUILD_ID__, injected by Vite), and the release notes carry the
 // commit the newest APK was built from — comparing the two answers
 // "is there an update?".
+import { Capacitor, registerPlugin } from '@capacitor/core'
+
 export const BUILD_ID = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev'
 export const APK_URL = 'https://github.com/mdeleo91/skate/releases/download/android/skate.apk'
+
+// Open a download link where it can actually download. Inside the APK the
+// WebView can't save files, so hand the URL to the system browser (Chrome),
+// whose download manager then offers the install.
+export async function openDownload(url) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const AppLauncher = registerPlugin('AppLauncher')
+      await AppLauncher.openUrl({ url })
+      return
+    } catch { /* fall through to a plain open */ }
+  }
+  window.open(url, '_blank', 'noopener')
+}
 
 const RELEASE_API = 'https://api.github.com/repos/mdeleo91/skate/releases/tags/android'
 

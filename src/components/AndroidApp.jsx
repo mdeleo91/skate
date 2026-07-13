@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card, SectionTitle } from './ui'
 import Icon from './icons'
 import { isNativeApp } from '../lib/geo'
-import { BUILD_ID, APK_URL, fetchLatestAndroidBuild } from '../lib/appUpdate'
+import { BUILD_ID, APK_URL, fetchLatestAndroidBuild, openDownload } from '../lib/appUpdate'
 
 // One card, two jobs:
 //  - In a browser: "get the Android app" with a direct APK download.
@@ -87,9 +87,13 @@ function UpdateCard() {
               : 'Couldn’t compare versions — you can grab the latest build anyway.'}
             {' '}Open the downloaded file and Android installs it over this one; your data stays.
           </p>
-          <a href={state.latest?.url || APK_URL} target="_blank" rel="noreferrer" className="btn-primary w-full">
+          <button onClick={() => openDownload(state.latest?.url || APK_URL)} className="btn-primary w-full">
             <Icon name="download" size={17} /> Download update
-          </a>
+          </button>
+          <p className="text-xs text-slate-500 mt-2">
+            The download opens in your browser — when it finishes, tap the skate.apk notification
+            and choose Install.
+          </p>
         </>
       )}
       {state.status === 'error' && (
