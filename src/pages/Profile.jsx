@@ -112,7 +112,11 @@ export default function Profile() {
               <span className={data.cloud.status === 'error' ? 'text-ember-400' : 'text-slate-200'}>
                 {data.cloud.status === 'ok' && `synced to your account · ${new Date(data.cloud.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
                 {data.cloud.status === 'syncing' && 'syncing…'}
-                {data.cloud.status === 'error' && "couldn't reach the cloud — changes are safe on this device and sync when you're back online"}
+                {data.cloud.status === 'error' && (
+                  /skate_state|schema cache|PGRST/i.test(data.cloud.detail || '')
+                    ? 'sync is on, but the skate_state table is missing — run supabase/schema.sql in your Supabase project (SQL Editor), then reload'
+                    : "couldn't reach the cloud — changes are safe on this device and sync when you're back online"
+                )}
                 {data.cloud.status === 'idle' && 'synced to your account'}
               </span>
             ) : (

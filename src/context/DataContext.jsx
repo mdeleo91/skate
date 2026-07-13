@@ -143,8 +143,8 @@ export function DataProvider({ children }) {
           setState((s) => (s ? { ...s } : s))
         }
         setSync({ status: 'ok', at: Date.now() })
-      } catch {
-        if (!cancelled) setSync({ status: 'error', at: null })
+      } catch (e) {
+        if (!cancelled) setSync({ status: 'error', at: null, detail: e?.message || '' })
       }
     })()
     return () => { cancelled = true }
@@ -165,9 +165,11 @@ export function DataProvider({ children }) {
           data: cloudState,
           updated_at: new Date().toISOString(),
         })
-        setSync(error ? { status: 'error', at: null } : { status: 'ok', at: Date.now() })
-      } catch {
-        setSync({ status: 'error', at: null })
+        setSync(error
+          ? { status: 'error', at: null, detail: error.message || '' }
+          : { status: 'ok', at: Date.now() })
+      } catch (e) {
+        setSync({ status: 'error', at: null, detail: e?.message || '' })
       }
     }, 1500) // debounce: a burst of taps becomes one write
     return () => clearTimeout(t)
