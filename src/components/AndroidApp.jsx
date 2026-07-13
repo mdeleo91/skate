@@ -27,6 +27,11 @@ function InstallCard() {
       <a href={APK_URL} className="btn-primary w-full mt-3.5">
         <Icon name="download" size={17} /> Download the Android app
       </a>
+      <CopyLinkButton />
+      <p className="text-xs text-slate-500 mt-3">
+        If the download sticks at "Downloading…", that's the popup browser failing to save files —
+        copy the link above and paste it into the Chrome app itself.
+      </p>
       <ol className="text-xs text-slate-500 mt-3 space-y-1 list-decimal list-inside leading-relaxed">
         <li>When the download finishes, close the download sheet — it won't advance on its own.</li>
         <li>Tap the <span className="text-slate-300">skate.apk</span> notification, or find it in the <span className="text-slate-300">Files</span> app under Downloads.</li>
@@ -34,6 +39,24 @@ function InstallCard() {
         <li>If Play Protect warns (normal outside the Play Store): More details → Install anyway.</li>
       </ol>
     </Card>
+  )
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      className="btn-ghost w-full mt-2 !py-1.5 text-xs"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(APK_URL)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        } catch { /* clipboard unavailable */ }
+      }}
+    >
+      {copied ? 'Copied — paste it into Chrome' : 'Copy download link'}
+    </button>
   )
 }
 
