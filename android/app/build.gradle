@@ -3,12 +3,26 @@ apply plugin: 'com.android.application'
 android {
     namespace = "app.skate.tracker"
     compileSdk = rootProject.ext.compileSdkVersion
+    // Every build must be signed with the SAME key or Android refuses to
+    // install one build over another ("App not installed"). CI runners are
+    // ephemeral and would otherwise mint a fresh debug key per build, so a
+    // committed keystore replaces the default debug signing. This key only
+    // gates sideload updates — it is not a Play Store identity.
+    signingConfigs {
+        debug {
+            storeFile file('../skate-signing.keystore')
+            storeType 'pkcs12'
+            storePassword 'skate-sideload'
+            keyAlias 'skate'
+            keyPassword 'skate-sideload'
+        }
+    }
     defaultConfig {
         applicationId "app.skate.tracker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
+        versionName (System.getenv("VERSION_NAME") ?: "dev")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

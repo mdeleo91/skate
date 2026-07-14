@@ -40,9 +40,17 @@ jobs:
 
       - name: Build APK
         run: cd android && ./gradlew assembleDebug --no-daemon
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ github.sha }}
 
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk skate.apk
+
+      # The whole point of the committed keystore: this fingerprint must be
+      # identical on every run, or updates break with "App not installed".
+      - name: Print signing fingerprint
+        run: keytool -printcert -jarfile skate.apk | grep -A2 SHA256 || true
 
       - uses: actions/upload-artifact@v4
         with:
