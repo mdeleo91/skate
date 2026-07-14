@@ -21,8 +21,8 @@ android {
         applicationId "app.skate.tracker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
-        versionName (System.getenv("VERSION_NAME") ?: "dev")
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInteger()
+        versionName = (System.getenv("VERSION_NAME") ?: "dev").take(7)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
