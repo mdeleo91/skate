@@ -315,7 +315,7 @@ export default function LiveSkate() {
 
   if (status === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center pt-[calc(1.5rem+var(--sat))]">
         <div className="mb-3 text-volt-400"><Icon name={type.icon} size={52} /></div>
         <h1 className="font-display text-3xl font-bold text-white">{type.name}</h1>
         <p className="text-sm text-slate-400 mt-2 max-w-xs">{type.blurb}</p>
@@ -341,7 +341,7 @@ export default function LiveSkate() {
   const acquiring = mode === 'gps' && points.length === 0 && !gpsError
 
   return (
-    <div className="min-h-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto">
+    <div className="min-h-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto pt-[calc(1rem+var(--sat))]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${status === 'running' ? 'bg-volt-500 live-dot' : 'bg-slate-600'}`} />
@@ -406,7 +406,7 @@ export default function LiveSkate() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="grid grid-cols-3 gap-3 pb-[var(--sab)]">
         {status === 'running' ? (
           <button onClick={pause} className="btn-ghost !py-4"><Icon name="pause" size={18} /> Pause</button>
         ) : (

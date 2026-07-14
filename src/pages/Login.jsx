@@ -32,7 +32,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="lg:w-1/2 px-6 pt-12 pb-8 lg:p-14 lg:flex lg:flex-col lg:justify-center">
+      <div className="lg:w-1/2 px-6 pt-[calc(3rem+var(--sat))] pb-8 lg:p-14 lg:flex lg:flex-col lg:justify-center">
         <div className="flex items-center gap-2.5">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-volt-500 text-ink-900 font-display text-xl font-bold shadow-glow">S</span>
           <span className="font-display text-2xl font-bold tracking-tight text-white">Skate</span>

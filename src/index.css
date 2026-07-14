@@ -2,7 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
+:root {
+  color-scheme: dark;
+  /* Safe areas: Capacitor (Android edge-to-edge) injects --safe-area-inset-*;
+     iOS standalone provides env(); desktop browsers resolve to 0. */
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
 
 html, body, #root { height: 100%; }
 

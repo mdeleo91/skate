@@ -38,7 +38,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-full pb-24 sm:pb-8">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl pt-[var(--sat)]">
         <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-volt-500 text-ink-900 font-display font-bold shadow-glow">S</span>
@@ -84,7 +84,7 @@ export default function Layout({ children }) {
 
       <main className="mx-auto max-w-5xl px-4 py-5">{children}</main>
 
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl pb-[var(--sab)]">
         <div className="grid grid-cols-5">
           {PRIMARY.map((l) => {
             const active = l.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(l.to)

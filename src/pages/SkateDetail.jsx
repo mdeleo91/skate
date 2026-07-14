@@ -77,7 +77,7 @@ export default function SkateDetail() {
 
   return (
     <div className="min-h-screen max-w-2xl mx-auto flex flex-col">
-      <header className="sticky top-0 z-40 bg-ink-900/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 bg-ink-900/90 backdrop-blur-xl pt-[var(--sat)]">
         <div className="flex items-center justify-between px-4 h-14">
           <button onClick={() => nav('/history')} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-ink-700 text-slate-300 hover:text-white text-xl leading-none">×</button>
           <h1 className="font-display font-bold text-white">Skate Details</h1>
