@@ -48,9 +48,14 @@ jobs:
         run: cp android/app/build/outputs/apk/debug/app-debug.apk skate.apk
 
       # The whole point of the committed keystore: this fingerprint must be
-      # identical on every run, or updates break with "App not installed".
-      - name: Print signing fingerprint
-        run: keytool -printcert -jarfile skate.apk | grep -A2 SHA256 || true
+      # 9508174620E2A93119C19FA6DBC65640D0E1F2A04E99879AB39E5E443AE7A7F5 on
+      # every run, or updates break with "App not installed". (keytool can't
+      # read v2-only APK signatures; apksigner can.)
+      - name: Verify signing fingerprint
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -1)
+          "$APKSIGNER" verify --print-certs skate.apk | tee /tmp/certs.txt
+          grep -qi '9508174620e2a93119c19fa6dbc65640d0e1f2a04e99879ab39e5e443ae7a7f5' /tmp/certs.txt
 
       - uses: actions/upload-artifact@v4
         with:
