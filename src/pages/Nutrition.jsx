@@ -233,9 +233,11 @@ function AddFoodForm({ food, onClose }) {
   const { addMeal, favorites, toggleFavorite } = useData()
   // Drinks land in Late Night by default — that's usually when they happen.
   const [slot, setSlot] = useState(DRINK_CATS.has(food.cat) ? 'Late Night' : 'Breakfast')
-  const [qty, setQty] = useState(1)
+  // Keep the raw text so the field can be emptied mid-edit (e.g. "1" → "" → ".5").
+  const [qty, setQty] = useState('1')
   const [date, setDate] = useState(todayISO())
-  const scale = (n) => Math.round((n || 0) * qty)
+  const qtyNum = parseFloat(qty) || 0
+  const scale = (n) => Math.round((n || 0) * qtyNum)
   return (
     <Modal open onClose={onClose} title={food.name}>
       <div className="space-y-3">
@@ -249,7 +251,7 @@ function AddFoodForm({ food, onClose }) {
           </div>
           <div>
             <label className="label">Servings</label>
-            <input type="number" step="0.5" min="0.5" className="input" value={qty} onChange={(e) => setQty(+e.target.value || 1)} />
+            <input type="number" step="0.5" min="0" inputMode="decimal" className="input" value={qty} onChange={(e) => setQty(e.target.value)} />
           </div>
         </div>
         <div>
@@ -270,9 +272,10 @@ function AddFoodForm({ food, onClose }) {
           </button>
           <button
             className="btn-primary flex-1"
+            disabled={!(qtyNum > 0)}
             onClick={() => {
               addMeal({
-                slot, date, name: food.name, serving: `${qty} × ${food.serving}`,
+                slot, date, name: food.name, serving: `${qtyNum} × ${food.serving}`,
                 calories: scale(food.calories), protein: scale(food.protein), carbs: scale(food.carbs),
                 fat: scale(food.fat), fiber: scale(food.fiber), sugar: scale(food.sugar), sodium: scale(food.sodium),
               })
