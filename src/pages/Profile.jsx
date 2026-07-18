@@ -171,9 +171,11 @@ export default function Profile() {
 }
 
 // Diagnostic log export — every session start/stop, GPS fix, sensor reading,
-// button tap and crash marker. Exists so "the tracker stopped mid-skate" is
-// answerable from data instead of guesswork.
+// button tap and crash marker, plus the full recorded skate data (routes with
+// per-point vibration values). Exists so "the tracker stopped mid-skate" and
+// "the roughness read looks wrong" are answerable from data, not guesswork.
 function DebugLogCard() {
+  const data = useData()
   const [msg, setMsg] = useState(null)
   const count = logEntryCount()
 
@@ -182,9 +184,20 @@ function DebugLogCard() {
     setTimeout(() => setMsg(null), 2500)
   }
 
+  function exportAll() {
+    const skates = data?.workouts ?? []
+    return [
+      `# Skate debug export · ${new Date().toISOString()}`,
+      '===== DEBUG LOG =====',
+      exportLogText(),
+      `===== SKATE DATA (${skates.length} workouts, newest first) =====`,
+      ...skates.map((w) => JSON.stringify(w)),
+    ].join('\n')
+  }
+
   async function copy() {
     try {
-      await navigator.clipboard.writeText(exportLogText())
+      await navigator.clipboard.writeText(exportAll())
       note('Copied — paste it anywhere for review')
     } catch {
       note("Couldn't access the clipboard")
@@ -193,12 +206,12 @@ function DebugLogCard() {
 
   async function share() {
     try {
-      await navigator.share({ title: 'Skate debug log', text: exportLogText() })
+      await navigator.share({ title: 'Skate debug log', text: exportAll() })
     } catch { /* user cancelled or unsupported */ }
   }
 
   function download() {
-    const blob = new Blob([exportLogText()], { type: 'text/plain' })
+    const blob = new Blob([exportAll()], { type: 'text/plain' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `skate-debug-${todayISO()}.log`
@@ -211,8 +224,9 @@ function DebugLogCard() {
       <div className="font-semibold text-slate-100 text-sm">Debug log</div>
       <p className="text-xs text-slate-400 mt-1 leading-relaxed">
         A diagnostic record of tracking sessions — GPS fixes, vibration readings, button taps,
-        crashes and unexpected shutdowns. {count.toLocaleString()} entries. If a skate ever cuts out,
-        this is how we find out why: copy it and send it in for review.
+        crashes and unexpected shutdowns ({count.toLocaleString()} entries) plus every recorded
+        skate with its full route data. If a skate ever cuts out or reads wrong, this is how we
+        find out why: copy it and send it in for review.
       </p>
       <div className="grid grid-cols-3 gap-2 mt-3">
         <button onClick={copy} className="btn-ghost !py-1.5 text-xs">Copy log</button>
