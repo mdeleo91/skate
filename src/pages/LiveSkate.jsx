@@ -113,9 +113,18 @@ export default function LiveSkate() {
       Roughness.read()
         .then(({ rms, samples }) => {
           motionSamples.current = samples
-          if (samples > 3 && rms >= 0) roughRms.current = +rms.toFixed(2)
+          if (samples > 3 && rms >= 0) {
+            if (roughRms.current == null) dlog('motion:live', { samples }, { critical: true })
+            roughRms.current = +rms.toFixed(2)
+          } else if (roughRms.current != null) {
+            // Sensor stalled (screen-off suspend). A gap in the data is the
+            // truth; carrying the last value forward painted a frozen fake.
+            roughRms.current = null
+            dlog('motion:stalled', { samples }, { critical: true })
+          }
         })
         .catch((e) => {
+          roughRms.current = null
           if (!motionReadFailed.current) {
             motionReadFailed.current = true
             dlog('motion:read-error', String(e?.message ?? e).slice(0, 200), { critical: true })
@@ -202,9 +211,9 @@ export default function LiveSkate() {
     // In the APK, sample natively — devicemotion dies when the screen sleeps.
     if (Roughness) {
       try {
-        await Roughness.start()
+        const info = await Roughness.start()
         motionSeen.current = true
-        dlog('motion:native-started', null, { critical: true })
+        dlog('motion:native-started', info, { critical: true })
         return
       } catch (e) {
         dlog('motion:native-failed', String(e?.message ?? e).slice(0, 200), { critical: true })

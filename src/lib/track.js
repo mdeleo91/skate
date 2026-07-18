@@ -37,13 +37,33 @@ export function surfaceColor(r) {
   return `hsl(${hue}, 85%, 55%)`
 }
 
+// A frozen sensor used to leave the last live RMS stamped on every later
+// point (screen-off suspend + a carry-forward bug). Real vibration never
+// repeats to two decimals this many times in a row, so long identical runs
+// are provably dead data — strip them so old skates read honestly.
+const FROZEN_RUN = 6 // consecutive fixes can legitimately share one 1 Hz sample window; hundreds can't
+
+export function cleanRoughness(route) {
+  const pts = route || []
+  const out = pts.map((p) => p.r)
+  let start = 0
+  for (let i = 1; i <= pts.length; i++) {
+    if (i < pts.length && pts[i].r != null && pts[i].r === pts[start].r) continue
+    if (pts[start].r != null && i - start >= FROZEN_RUN) {
+      for (let j = start; j < i; j++) out[j] = null
+    }
+    start = i
+  }
+  return out
+}
+
 // Share of the trace with vibration data that reads rough vs smooth.
 // coveragePct is how much of the route actually has vibration data — the
 // rough/smooth split only describes that sampled slice, so low coverage
 // means the split should be taken with a grain of salt (and labeled as such).
 export function terrainStats(route) {
   const pts = route || []
-  const rs = pts.map((p) => p.r).filter((v) => v != null)
+  const rs = cleanRoughness(pts).filter((v) => v != null)
   if (rs.length < 5) return null
   const roughPct = Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100)
   return { roughPct, smoothPct: 100 - roughPct, coveragePct: Math.round((rs.length / pts.length) * 100) }

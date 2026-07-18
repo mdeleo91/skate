@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useLayoutEffect } from 'react'
 import Icon from './icons'
 import {
-  TILE, lonToWorldX, latToWorldY, fitZoom, trackBounds, segmentSpeeds, speedColor, surfaceColor,
+  TILE, lonToWorldX, latToWorldY, fitZoom, trackBounds, segmentSpeeds, speedColor, surfaceColor, cleanRoughness,
 } from '../lib/track'
 
 // Street-tile map with a speed-colored route line. Tiles come from
@@ -37,11 +37,11 @@ export default function TrackMap({ points, height = 260, className = '', colorBy
 
     let segs
     if (colorBy === 'surface') {
-      const hasR = points.some((p) => p.r != null)
-      if (hasR) {
+      const rs = cleanRoughness(points) // frozen-sensor runs become honest gaps
+      if (rs.some((v) => v != null)) {
         segs = points.slice(1).map((p, i) => ({
           x1: px[i].x, y1: px[i].y, x2: px[i + 1].x, y2: px[i + 1].y,
-          color: surfaceColor(p.r ?? points[i].r),
+          color: surfaceColor(rs[i + 1] ?? rs[i]),
         }))
       }
     }

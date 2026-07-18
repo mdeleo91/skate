@@ -58,9 +58,10 @@ export default function SkateDetail() {
     } catch { /* user cancelled */ }
   }
 
-  const terrain = w.terrain || terrainStats(w.route)
-  // Older sessions saved terrain without coverage — recover it from the route.
-  const surfCov = terrain ? (terrain.coveragePct ?? terrainStats(w.route)?.coveragePct ?? null) : null
+  // Recompute from the route when possible — it applies frozen-sensor cleanup
+  // that saved terrain objects from older builds don't have.
+  const terrain = terrainStats(w.route) || w.terrain
+  const surfCov = terrain?.coveragePct ?? null
   const partialSurface = surfCov != null && surfCov < 90
   const rows = [
     ...(w.miles > 0 ? [

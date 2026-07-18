@@ -30,15 +30,23 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
     private double sumSq = 0;
     private int count = 0;
 
+    // Prefer the wake-up variant: Pixels (and others) suspend non-wake-up
+    // sensors when the screen turns off even while a partial wake lock holds
+    // the CPU — which froze mid-skate roughness data at the last seen value.
+    private Sensor pick(int type) {
+        Sensor s = sensors.getDefaultSensor(type, true);
+        return s != null ? s : sensors.getDefaultSensor(type);
+    }
+
     @PluginMethod
     public void start(PluginCall call) {
         if (sensors == null) {
             sensors = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
         }
         stopSampling();
-        sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        sensor = pick(Sensor.TYPE_LINEAR_ACCELERATION);
         linear = sensor != null;
-        if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (sensor == null) sensor = pick(Sensor.TYPE_ACCELEROMETER);
         if (sensor == null) {
             call.reject("No accelerometer on this device");
             return;
@@ -49,7 +57,11 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
         // Timed as a leak backstop — released properly when the session ends.
         lock.acquire(6 * 60 * 60 * 1000L);
         synchronized (this) { sumSq = 0; count = 0; }
-        call.resolve();
+        JSObject ret = new JSObject();
+        ret.put("sensor", sensor.getName());
+        ret.put("wakeUp", sensor.isWakeUpSensor());
+        ret.put("linear", linear);
+        call.resolve(ret);
     }
 
     @PluginMethod
