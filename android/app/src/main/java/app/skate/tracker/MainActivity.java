@@ -9,6 +9,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(RoughnessPlugin.class);
         super.onCreate(savedInstanceState);
         // A WebView cannot save files — without this, tapping a download link
         // (like an APK update) silently does nothing. Hand any download off to

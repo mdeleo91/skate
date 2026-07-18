@@ -38,11 +38,15 @@ export function surfaceColor(r) {
 }
 
 // Share of the trace with vibration data that reads rough vs smooth.
+// coveragePct is how much of the route actually has vibration data — the
+// rough/smooth split only describes that sampled slice, so low coverage
+// means the split should be taken with a grain of salt (and labeled as such).
 export function terrainStats(route) {
-  const rs = (route || []).map((p) => p.r).filter((v) => v != null)
+  const pts = route || []
+  const rs = pts.map((p) => p.r).filter((v) => v != null)
   if (rs.length < 5) return null
   const roughPct = Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100)
-  return { roughPct, smoothPct: 100 - roughPct }
+  return { roughPct, smoothPct: 100 - roughPct, coveragePct: Math.round((rs.length / pts.length) * 100) }
 }
 
 // ---- per-mile splits ------------------------------------------------------

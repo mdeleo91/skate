@@ -59,6 +59,9 @@ export default function SkateDetail() {
   }
 
   const terrain = w.terrain || terrainStats(w.route)
+  // Older sessions saved terrain without coverage — recover it from the route.
+  const surfCov = terrain ? (terrain.coveragePct ?? terrainStats(w.route)?.coveragePct ?? null) : null
+  const partialSurface = surfCov != null && surfCov < 90
   const rows = [
     ...(w.miles > 0 ? [
       ['Avg Speed', w.movingSec != null ? `${w.avgSpeed} mph moving` : `${w.avgSpeed} mph`],
@@ -70,7 +73,7 @@ export default function SkateDetail() {
       ['Moving Time', fmtDuration(w.movingSec)],
       ['Downtime', fmtDuration(w.stoppedSec ?? Math.max(0, durationSec - w.movingSec))],
     ] : []),
-    ...(terrain ? [['Terrain', `${terrain.smoothPct}% smooth · ${terrain.roughPct}% rough`]] : []),
+    ...(terrain ? [['Terrain', `${terrain.smoothPct}% smooth · ${terrain.roughPct}% rough${partialSurface ? ` (${surfCov}% of skate sampled)` : ''}`]] : []),
     ...(w.avgHr ? [['Avg Heart Rate', `${w.avgHr} bpm`]] : []),
     ['Source', w.source === 'gps' ? 'GPS' : w.source === 'demo' ? 'Demo mode' : w.source === 'seed' ? 'Sample data' : 'Manual entry'],
   ]
@@ -227,7 +230,7 @@ export default function SkateDetail() {
             </div>
             <p className="px-4 text-xs text-slate-500">
               {mapColor === 'surface'
-                ? 'Line color is pavement quality from phone vibration — green smooth, orange rough.'
+                ? `Line color is pavement quality from phone vibration — green smooth, orange rough.${partialSurface ? ' Grey stretches have no vibration data — the screen was off, and older app versions could only sense pavement while it was on.' : ''}`
                 : 'Line color is speed — green is easy, orange is flying.'}
             </p>
           </div>

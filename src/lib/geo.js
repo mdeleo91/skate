@@ -3,6 +3,12 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 // True when running inside the Android/iOS app shell rather than a browser.
 export const isNativeApp = Capacitor.isNativePlatform()
 
+// Native accelerometer sampler (RoughnessPlugin.java). Unlike the web
+// devicemotion event, it keeps measuring pavement vibration with the screen
+// off — start() when a GPS session begins, read() once per fix, stop() at the
+// end. Null in the browser, where LiveSkate falls back to devicemotion.
+export const Roughness = isNativeApp ? registerPlugin('Roughness') : null
+
 // One watcher API for both worlds.
 //
 // Native (APK): @capacitor-community/background-geolocation runs an Android

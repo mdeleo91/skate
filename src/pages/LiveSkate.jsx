@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
 import { ROUGH_RMS } from '../lib/track'
-import { isNativeApp, startLocationWatch } from '../lib/geo'
+import { isNativeApp, startLocationWatch, Roughness } from '../lib/geo'
 import { RouteMap, Modal } from '../components/ui'
 import Icon from '../components/icons'
 
@@ -83,7 +83,11 @@ export default function LiveSkate() {
     const i = setInterval(() => {
       setNowTick((n) => n + 1)
       const buf = motionBuf.current
-      if (buf.length > 3) {
+      if (Roughness && mode === 'gps') {
+        // Native sampling: roughRms is refreshed per GPS fix; just drive the chip.
+        const r = roughRms.current
+        setSurface(r != null && speedRef.current >= MOVING_MPH ? (r >= ROUGH_RMS ? 'rough' : 'smooth') : null)
+      } else if (buf.length > 3) {
         const rms = Math.sqrt(buf.reduce((a, v) => a + v * v, 0) / buf.length)
         roughRms.current = +rms.toFixed(2)
         setSurface(speedRef.current >= MOVING_MPH ? (rms >= ROUGH_RMS ? 'rough' : 'smooth') : null)
@@ -99,6 +103,16 @@ export default function LiveSkate() {
   // ---- GPS -------------------------------------------------------------------
   const handlePosition = useCallback((pos) => {
     if (statusRef.current !== 'running') return // paused: freeze everything
+    // Drain the native vibration buffer once per fix. Fire-and-forget keeps
+    // point ordering synchronous — this fix carries the previous window's RMS
+    // (a one-fix lag), the next fix gets this stretch of pavement.
+    if (Roughness) {
+      Roughness.read()
+        .then(({ rms, samples }) => {
+          if (samples > 3 && rms >= 0) roughRms.current = +rms.toFixed(2)
+        })
+        .catch(() => {})
+    }
     const { latitude: lat, longitude: lon, altitude, speed: mps, accuracy } = pos.coords
     if (accuracy && accuracy > 50) return // ignore garbage fixes
     const t = pos.timestamp || Date.now()
@@ -164,6 +178,14 @@ export default function LiveSkate() {
   }
 
   async function requestMotion() {
+    // In the APK, sample natively — devicemotion dies when the screen sleeps.
+    if (Roughness) {
+      try {
+        await Roughness.start()
+        motionSeen.current = true
+        return
+      } catch { /* no accelerometer — fall through to the web path */ }
+    }
     try {
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         const res = await DeviceMotionEvent.requestPermission()
@@ -251,6 +273,7 @@ export default function LiveSkate() {
   useEffect(() => () => {
     stopWatch()
     releaseWakeLock()
+    Roughness?.stop().catch(() => {})
     if (motionHandler.current) window.removeEventListener('devicemotion', motionHandler.current)
   }, [])
 
@@ -267,6 +290,7 @@ export default function LiveSkate() {
       pauseStart.current = null
     }
     lastFix.current = null // don't count the paused gap as one giant GPS segment
+    Roughness?.read().catch(() => {}) // discard vibration accumulated while paused
     setStatus('running')
     acquireWakeLock()
   }
@@ -274,6 +298,7 @@ export default function LiveSkate() {
     doneAt.current = pauseStart.current ?? Date.now()
     stopWatch()
     releaseWakeLock()
+    Roughness?.stop().catch(() => {})
     setStatus('done')
     setSpeed(0)
     setSaveOpen(true)
@@ -286,6 +311,7 @@ export default function LiveSkate() {
     const hrs = hrSamples.current
     const rs = points.map((p) => p.r).filter((v) => v != null)
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
+    const coveragePct = points.length ? Math.round((rs.length / points.length) * 100) : 0
     const finalElapsed = elapsedSec()
     const id = data.addWorkout({
       date: todayISO(),
@@ -302,7 +328,7 @@ export default function LiveSkate() {
       topSpeed: +topSpeed.toFixed(1),
       elevation: Math.round(elevation),
       avgHr: hrs.length ? Math.round(hrs.reduce((a, v) => a + v, 0) / hrs.length) : undefined,
-      terrain: roughPct != null ? { roughPct, smoothPct: 100 - roughPct } : undefined,
+      terrain: roughPct != null ? { roughPct, smoothPct: 100 - roughPct, coveragePct } : undefined,
       calories,
       laps,
       route: points.map((p) => ({ lat: p.lat, lon: p.lon, t: p.t, ...(p.r != null ? { r: p.r } : {}) })),
