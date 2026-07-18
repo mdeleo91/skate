@@ -62,9 +62,9 @@ export default function InstallApp() {
 
   return (
     <Card>
-      <SectionTitle><Icon name="install_mobile" size={15} className="mr-1.5" />Install Skate on your phone</SectionTitle>
+      <SectionTitle><Icon name="install_mobile" size={15} className="mr-1.5" />Install SkateFit on your phone</SectionTitle>
       <p className="text-sm text-slate-400 leading-relaxed">
-        Skate runs as a real app on your home screen — full screen, no browser chrome, with GPS for
+        SkateFit runs as a real app on your home screen — full screen, no browser chrome, with GPS for
         live skate tracking. Nothing to download from an app store.
       </p>
 
@@ -90,7 +90,7 @@ export default function InstallApp() {
             <li>Open this page in <span className="text-slate-200">Chrome</span></li>
             <li>Tap <span className="text-slate-200">Install app</span> above, or the <Icon name="more_vert" size={13} /> menu</li>
             <li>Choose <span className="text-slate-200">Install app</span> / Add to Home screen</li>
-            <li>Confirm — Skate installs like any other app</li>
+            <li>Confirm — SkateFit installs like any other app</li>
           </ol>
         </div>
       </div>

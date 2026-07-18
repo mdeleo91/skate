@@ -41,8 +41,8 @@ export default function Layout({ children }) {
       <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl pt-[var(--sat)]">
         <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-volt-500 text-ink-900 font-display font-bold shadow-glow">S</span>
-            <span className="font-display text-lg font-bold tracking-tight text-white">Skate</span>
+            <img src="/pwa-192x192.png" alt="" className="h-8 w-8 rounded-lg shadow-glow" />
+            <span className="font-display text-lg font-bold tracking-tight text-white">Skate<span className="text-volt-400">Fit</span></span>
             {demoMode && <span className="chip bg-ember-500/20 text-ember-400 ml-1">Demo</span>}
           </Link>
           <div className="flex items-center gap-2">

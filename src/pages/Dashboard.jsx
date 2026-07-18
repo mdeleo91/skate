@@ -110,7 +110,7 @@ export default function Dashboard() {
               </div>
               {d.weights.length >= 2 ? (
                 <>
-                  <Sparkline data={weightSeries} color="#A3F015" trend height={72} />
+                  <Sparkline data={weightSeries} color="#2DD4BF" trend height={72} />
                   <div className="text-xs text-slate-500">
                     Dashed line is the trend. Daily wobble is water, not fat.
                   </div>
@@ -205,7 +205,7 @@ function FirstRun({ name }) {
       <div className="pt-2">
         <div className="text-sm text-slate-400">{greeting()}, {name}</div>
         <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1 leading-tight">
-          Welcome to Skate.<br />
+          Welcome to SkateFit.<br />
           <span className="text-volt-400">Let's get your first skate in.</span>
         </h1>
         <p className="text-sm text-slate-400 mt-2.5 max-w-lg leading-relaxed">

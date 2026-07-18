@@ -33,7 +33,7 @@ export function Bar({ value, goal, color = 'bg-volt-500', className = '' }) {
   )
 }
 
-export function Ring({ value, goal, size = 132, stroke = 12, label, sub, color = '#A3F015' }) {
+export function Ring({ value, goal, size = 132, stroke = 12, label, sub, color = '#2DD4BF' }) {
   const pct = goal > 0 ? Math.max(0, Math.min(1, value / goal)) : 0
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
@@ -55,7 +55,7 @@ export function Ring({ value, goal, size = 132, stroke = 12, label, sub, color =
   )
 }
 
-export function Sparkline({ data, width = 300, height = 70, color = '#A3F015', fill = true, trend }) {
+export function Sparkline({ data, width = 300, height = 70, color = '#2DD4BF', fill = true, trend }) {
   if (!data || data.length < 2) return <div className="h-[70px] grid place-items-center text-xs text-slate-500">Not enough data yet</div>
   const min = Math.min(...data)
   const max = Math.max(...data)
@@ -93,12 +93,12 @@ export function Sparkline({ data, width = 300, height = 70, color = '#A3F015', f
       </defs>
       {fill && <path d={area} fill={`url(#g-${color.slice(1)})`} />}
       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" opacity={trend ? 0.45 : 1} />
-      {trendPath && <path d={trendPath} fill="none" stroke="#43E9FF" strokeWidth="2.5" strokeDasharray="5 4" strokeLinecap="round" />}
+      {trendPath && <path d={trendPath} fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeDasharray="5 4" strokeLinecap="round" />}
     </svg>
   )
 }
 
-export function RouteMap({ points, height = 160, color = '#A3F015' }) {
+export function RouteMap({ points, height = 160, color = '#2DD4BF' }) {
   if (!points || points.length < 2) {
     return <div className="grid place-items-center text-xs text-slate-500 rounded-xl bg-ink-700" style={{ height }}>No GPS trace</div>
   }
@@ -113,8 +113,8 @@ export function RouteMap({ points, height = 160, color = '#A3F015' }) {
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full rounded-xl bg-ink-700" style={{ height }}>
       <path d={d} fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={sx(points[0].lon)} cy={sy(points[0].lat)} r="4.5" fill="#43E9FF" />
-      <circle cx={sx(points[points.length - 1].lon)} cy={sy(points[points.length - 1].lat)} r="4.5" fill="#FF7A45" />
+      <circle cx={sx(points[0].lon)} cy={sy(points[0].lat)} r="4.5" fill="#3B82F6" />
+      <circle cx={sx(points[points.length - 1].lon)} cy={sy(points[points.length - 1].lat)} r="4.5" fill="#F87171" />
     </svg>
   )
 }
@@ -156,4 +156,4 @@ export function Modal({ open, onClose, title, children }) {
   )
 }
 
-export const COLORS = { volt: '#A3F015', surge: '#43E9FF', ember: '#FF7A45' }
+export const COLORS = { volt: '#2DD4BF', surge: '#3B82F6', ember: '#F87171' }

@@ -1,36 +1,44 @@
 /** @type {import('tailwindcss').Config} */
+// SkateFit brand palette (Brand Style Guide v1.0):
+//   Skate Teal #2DD4BF · Midnight #0F172A · Slate #1E293B · Gray #94A3B8
+//   Semantic: success #22C55E · warning #F59E0B · error #EF4444 · info #3B82F6
+// Token names (volt/surge/ember/ink) predate the rebrand; their values are
+// the brand colors, which reskins the whole app without touching components.
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
         ink: {
-          900: '#080B12',
-          800: '#0E121C',
-          700: '#151B27',
-          600: '#1E2634',
-          500: '#2A3444',
+          900: '#0F172A', // Midnight — app background
+          800: '#1E293B', // Slate — cards, panels
+          700: '#293548', // inputs, tiles
+          600: '#334155',
+          500: '#475569',
         },
         volt: {
-          400: '#B8FF3C',
-          500: '#A3F015',
-          600: '#86C90D',
+          // Skate Teal — primary accent
+          400: '#2DD4BF',
+          500: '#14B8A6',
+          600: '#0D9488',
         },
         surge: {
-          400: '#43E9FF',
-          500: '#12CFEC',
+          // Info blue — secondary accent (water, trend lines)
+          400: '#60A5FA',
+          500: '#3B82F6',
         },
         ember: {
-          400: '#FF7A45',
-          500: '#F2571B',
+          // Error red — alerts, destructive actions, over-budget
+          400: '#F87171',
+          500: '#EF4444',
         },
       },
       fontFamily: {
-        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'system-ui', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        glow: '0 0 24px -4px rgba(163, 240, 21, 0.45)',
+        glow: '0 0 24px -4px rgba(45, 212, 191, 0.45)',
       },
     },
   },

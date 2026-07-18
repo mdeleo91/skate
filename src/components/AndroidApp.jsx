@@ -18,7 +18,7 @@ export default function AndroidApp() {
 function InstallCard() {
   return (
     <Card>
-      <SectionTitle><Icon name="android" size={15} className="mr-1.5 text-volt-400" />Skate for Android</SectionTitle>
+      <SectionTitle><Icon name="android" size={15} className="mr-1.5 text-volt-400" />SkateFit for Android</SectionTitle>
       <p className="text-sm text-slate-400 leading-relaxed">
         The Android app tracks skates with the <span className="text-slate-200">screen off</span> —
         GPS runs as a background service, so you can lock the phone and pocket it. The browser

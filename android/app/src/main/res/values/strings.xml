@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Skate</string>
-    <string name="title_activity_main">Skate</string>
+    <string name="app_name">SkateFit</string>
+    <string name="title_activity_main">SkateFit</string>
     <string name="package_name">app.skate.tracker</string>
     <string name="custom_url_scheme">app.skate.tracker</string>
 </resources>

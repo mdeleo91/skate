@@ -71,5 +71,5 @@ jobs:
           gh release delete android --yes || true
           git push --delete origin android || true
           gh release create android skate.apk \
-            --title "Skate for Android (latest)" \
+            --title "SkateFit for Android (latest)" \
             --notes "Debug-signed APK built from ${GITHUB_SHA::7}. Download on your phone and open to install (allow installs from your browser when prompted). Tracking runs as a foreground service, so recording continues while the screen is off."

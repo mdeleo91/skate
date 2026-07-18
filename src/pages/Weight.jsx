@@ -67,10 +67,10 @@ export default function Weight() {
             ))}
           </div>
         </div>
-        <Sparkline data={values} trend height={140} color="#A3F015" />
+        <Sparkline data={values} trend height={140} color="#2DD4BF" />
         <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
           <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-volt-500 inline-block" /> Daily weigh-ins</span>
-          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-surge-400 inline-block" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#43E9FF 0 3px,transparent 3px 6px)' }} /> Trend</span>
+          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-surge-400 inline-block" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#3B82F6 0 3px,transparent 3px 6px)' }} /> Trend</span>
         </div>
       </Card>
 

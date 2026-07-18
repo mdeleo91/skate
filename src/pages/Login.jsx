@@ -34,15 +34,15 @@ export default function Login() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       <div className="lg:w-1/2 px-6 pt-[calc(3rem+var(--sat))] pb-8 lg:p-14 lg:flex lg:flex-col lg:justify-center">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-volt-500 text-ink-900 font-display text-xl font-bold shadow-glow">S</span>
-          <span className="font-display text-2xl font-bold tracking-tight text-white">Skate</span>
+          <img src="/pwa-192x192.png" alt="" className="h-11 w-11 rounded-xl shadow-glow" />
+          <span className="font-display text-2xl font-bold tracking-tight text-white">Skate<span className="text-volt-400">Fit</span></span>
         </div>
         <h1 className="mt-8 font-display text-4xl lg:text-5xl font-bold leading-[1.08] text-white">
           The goal isn't to lose weight.<br />
           <span className="text-volt-400">It's to become a better skater.</span>
         </h1>
         <p className="mt-4 text-slate-400 max-w-md leading-relaxed">
-          Most fitness apps file inline skating under "generic cardio." Skate builds everything —
+          Most fitness apps file inline skating under "generic cardio." SkateFit builds everything —
           calories, programs, progress — around the sport itself. The weight loss follows.
         </p>
         <div className="mt-8 space-y-3 max-w-md">

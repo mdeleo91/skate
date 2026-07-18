@@ -116,10 +116,10 @@ export default function TrackMap({ points, height = 260, className = '', colorBy
               : (
                 <polyline
                   points={view.px.map((p) => `${p.x},${p.y}`).join(' ')}
-                  fill="none" stroke="#A3F015" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round"
+                  fill="none" stroke="#2DD4BF" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round"
                 />
               )}
-            {start && <circle cx={start.x} cy={start.y} r="7" fill="#43E9FF" stroke="#0B1220" strokeWidth="2.5" />}
+            {start && <circle cx={start.x} cy={start.y} r="7" fill="#3B82F6" stroke="#0F172A" strokeWidth="2.5" />}
           </svg>
           {end && (
             <div className="absolute text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" style={{ left: end.x - 3, top: end.y - 20 }}>

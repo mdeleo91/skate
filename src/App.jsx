@@ -28,7 +28,7 @@ function Splash() {
   return (
     <div className="min-h-screen grid place-items-center">
       <div className="flex flex-col items-center gap-3">
-        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-volt-500 text-ink-900 font-display text-2xl font-bold shadow-glow live-dot">S</div>
+        <img src="/pwa-192x192.png" alt="" className="h-14 w-14 rounded-2xl shadow-glow live-dot" />
         <div className="text-sm text-slate-400">Lacing up…</div>
       </div>
     </div>

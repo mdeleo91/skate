@@ -1,15 +1,20 @@
 {
-  "name": "Skate — become a better skater",
-  "short_name": "Skate",
-  "description": "A weight-loss and fitness app built around inline skating. Track skates, routes, calories, weight and streaks — and become a stronger skater.",
+  "name": "SkateFit \u2014 Skate. Move. Get Fit.",
+  "short_name": "SkateFit",
+  "description": "SkateFit is a weight-loss and fitness app built for inline skaters. Track skates, routes, calories, weight and streaks.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#080B12",
-  "background_color": "#080B12",
-  "categories": ["health", "fitness", "sports", "lifestyle"],
+  "theme_color": "#0F172A",
+  "background_color": "#0F172A",
+  "categories": [
+    "health",
+    "fitness",
+    "sports",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "/pwa-192x192.png",

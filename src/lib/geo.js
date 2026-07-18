@@ -24,7 +24,7 @@ export async function startLocationWatch(onFix, onError) {
     const BackgroundGeolocation = registerPlugin('BackgroundGeolocation')
     const id = await BackgroundGeolocation.addWatcher(
       {
-        backgroundTitle: 'Skate session in progress',
+        backgroundTitle: 'SkateFit session in progress',
         backgroundMessage: 'Distance and route are still being recorded.',
         requestPermissions: true,
         stale: false,
