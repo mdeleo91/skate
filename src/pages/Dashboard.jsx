@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import Icon from '../components/icons'
-import LogSkateModal from '../components/LogSkateModal'
+import WeighInModal from '../components/WeighInModal'
 import { Card, Stat, Bar, Ring, Sparkline, SectionTitle } from '../components/ui'
-import { fmtDuration } from '../lib/calc'
 import { ACHIEVEMENTS } from '../lib/achievements'
+import { useWeather, scoreConditions } from '../lib/weather'
 
 function greeting() {
   const h = new Date().getHours()
@@ -16,7 +16,7 @@ function greeting() {
 
 export default function Dashboard() {
   const data = useData()
-  const [logOpen, setLogOpen] = useState(false)
+  const [weighIn, setWeighIn] = useState(false)
   if (!data) return null
   const { d, profile, addWater } = data
 
@@ -45,6 +45,8 @@ export default function Dashboard() {
             : 'Even 15 easy minutes keeps the streak alive.'}
         </p>
       </div>
+
+      <ConditionsBanner />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="col-span-2 sm:col-span-2 flex items-center gap-4">
@@ -90,7 +92,14 @@ export default function Dashboard() {
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Card>
-          <SectionTitle action={<Link to="/weight" className="text-xs text-volt-400 font-semibold">Details</Link>}>Weight Trend</SectionTitle>
+          <SectionTitle
+            action={(
+              <span className="flex items-center gap-3">
+                <button onClick={() => setWeighIn(true)} className="text-xs text-volt-400 font-semibold">+ Weigh in</button>
+                <Link to="/weight" className="text-xs text-volt-400 font-semibold">Details</Link>
+              </span>
+            )}
+          >Weight Trend</SectionTitle>
           {d.hasWeights ? (
             <>
               <div className="flex items-baseline gap-2">
@@ -118,7 +127,7 @@ export default function Dashboard() {
                 No weigh-ins yet. Log a starting weight whenever you're ready — the trend matters far
                 more than the first number.
               </div>
-              <Link to="/weight" className="btn-ghost mt-3 !py-1.5 text-xs inline-flex">Log starting weight</Link>
+              <button onClick={() => setWeighIn(true)} className="btn-ghost mt-3 !py-1.5 text-xs inline-flex">Log starting weight</button>
             </div>
           )}
         </Card>
@@ -145,62 +154,41 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-3">
-        <Link to="/skate" className="card hover:border-volt-500/40 transition group">
-          <div className="text-volt-400"><Icon name="roller_skating" size={26} /></div>
-          <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">Start a Skate</div>
-          <div className="text-xs text-slate-400 mt-0.5">Pick a discipline and go</div>
-        </Link>
-        <Link to="/programs" className="card hover:border-volt-500/40 transition group">
-          <div className="text-surge-400"><Icon name={d.activeProgram ? d.activeProgram.icon : 'map'} size={26} /></div>
-          <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">
-            {d.activeProgram ? d.activeProgram.name : 'Join a Program'}
-          </div>
-          <div className="text-xs text-slate-400 mt-0.5">
-            {d.activeProgram ? `${data.program.doneDays.length} sessions done` : 'Structure beats motivation'}
-          </div>
-        </Link>
-        <Link to="/weather" className="card hover:border-volt-500/40 transition group">
-          <div className="text-ember-400"><Icon name="partly_cloudy_day" size={26} /></div>
-          <div className="font-display font-bold text-white mt-1.5 group-hover:text-volt-400 transition">Skate Conditions</div>
-          <div className="text-xs text-slate-400 mt-0.5">Is it a good day to skate?</div>
-        </Link>
-      </div>
-
-      <Card>
-        <SectionTitle
-          action={(
-            <span className="flex items-center gap-3">
-              <button onClick={() => setLogOpen(true)} className="text-xs text-volt-400 font-semibold">+ Log skate</button>
-              <Link to="/history" className="text-xs text-volt-400 font-semibold">History</Link>
-            </span>
-          )}
-        >Recent Activity</SectionTitle>
-        {d.hasWorkouts ? (
-          <div className="divide-y divide-white/5">
-            {data.workouts.slice(0, 4).map((w) => (
-              <div key={w.id} className="flex items-center gap-3 py-2.5 first:pt-0">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-700 text-slate-300">
-                  <Icon name={w.kind === 'strength' ? 'fitness_center' : w.kind === 'recovery' ? 'eco' : 'roller_skating'} size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-slate-100 truncate">{w.name}</div>
-                  <div className="text-xs text-slate-500">{w.date} · {fmtDuration(w.minutes * 60)}{w.miles ? ` · ${w.miles.toFixed(1)} mi` : ''}</div>
-                </div>
-                <div className="text-sm font-semibold tabular-nums text-volt-400">{w.calories} cal</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-sm text-slate-400 py-1">
-            Nothing logged yet. Your sessions collect here — every one counts, even the short easy ones.
-            <button onClick={() => setLogOpen(true)} className="btn-ghost mt-3 !py-1.5 text-xs flex">Log a past skate</button>
-          </div>
-        )}
-      </Card>
-
-      <LogSkateModal open={logOpen} onClose={() => setLogOpen(false)} />
+      <WeighInModal open={weighIn} onClose={() => setWeighIn(false)} />
     </div>
+  )
+}
+
+// Compact skate-score strip — the full forecast lives one tap away.
+function ConditionsBanner() {
+  const wx = useWeather()
+  const s = !wx.loading && !wx.error ? scoreConditions(wx.w) : null
+
+  return (
+    <Link to="/weather" className="card flex items-center gap-3 !py-3 hover:border-volt-500/40 transition group">
+      {s ? (
+        <>
+          <span className={`shrink-0 ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}><Icon name={s.icon} size={30} /></span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{s.verdict}</div>
+            <div className="text-xs text-slate-400 truncate">{wx.w.temp}°F · {wx.w.wind} mph wind · {wx.w.rain}% rain</div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className={`font-display text-2xl font-bold tabular-nums ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}>{s.score}</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500">Score</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="shrink-0 text-slate-500"><Icon name="partly_cloudy_day" size={30} /></span>
+          <div className="flex-1">
+            <div className="font-display font-bold text-slate-300">Skate conditions</div>
+            <div className="text-xs text-slate-500">{wx.loading ? 'Checking the sky…' : 'Tap for the forecast'}</div>
+          </div>
+          <Icon name="arrow_forward" size={18} className="text-slate-500 shrink-0" />
+        </>
+      )}
+    </Link>
   )
 }
 

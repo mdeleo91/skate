@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Modal } from '../components/ui'
 import Icon from '../components/icons'
 import LogSkateModal from '../components/LogSkateModal'
+import RecentActivity from '../components/RecentActivity'
 import { todayISO } from '../lib/calc'
 
 const RING = { volt: 'hover:border-volt-500/50', surge: 'hover:border-surge-500/50', ember: 'hover:border-ember-500/50' }
@@ -71,6 +72,8 @@ export default function SkateStart() {
           </button>
         </Card>
       </div>
+
+      <RecentActivity />
 
       <Modal
         open={!!selected}
