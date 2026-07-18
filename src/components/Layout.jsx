@@ -1,15 +1,14 @@
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useData } from '../context/DataContext'
 import Icon from './icons'
 
 const PRIMARY = [
-  { to: '/', label: 'Today', icon: 'home' },
+  { to: '/', label: 'Home', icon: 'home' },
   { to: '/skate', label: 'Skate', icon: 'roller_skating' },
-  { to: '/nutrition', label: 'Fuel', icon: 'nutrition' },
+  { to: '/history', label: 'Workouts', icon: 'fitness_center' },
+  { to: '/nutrition', label: 'Nutrition', icon: 'nutrition' },
   { to: '/progress', label: 'Progress', icon: 'monitoring' },
-  { to: '/more', label: 'More', icon: 'more_horiz' },
 ]
 
 const ALL_LINKS = [
@@ -31,44 +30,37 @@ export { ALL_LINKS }
 
 export default function Layout({ children }) {
   const { user, signOut, demoMode } = useAuth()
-  const data = useData()
   const loc = useLocation()
-  const [menu, setMenu] = useState(false)
-  const streak = data?.d?.streak ?? 0
+  const [drawer, setDrawer] = useState(false)
 
   return (
     <div className="min-h-full pb-24 sm:pb-8">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl pt-[var(--sat)]">
-        <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/pwa-192x192.png" alt="" className="h-8 w-8 rounded-lg shadow-glow" />
-            <span className="font-display text-lg font-bold tracking-tight text-white">Skate<span className="text-volt-400">Fit</span></span>
-            {demoMode && <span className="chip bg-ember-500/20 text-ember-400 ml-1">Demo</span>}
+      <header className="sticky top-0 z-40 border-b border-white/5 bg-ink-900/85 backdrop-blur-xl pt-[var(--sat)]">
+        <div className="mx-auto max-w-5xl px-3 h-14 grid grid-cols-[auto_1fr_auto] items-center">
+          <button
+            onClick={() => setDrawer(true)}
+            aria-label="Menu"
+            className="grid h-10 w-10 place-items-center rounded-lg text-slate-200 hover:bg-white/5"
+          >
+            <Icon name="menu" size={24} />
+          </button>
+          <Link to="/" className="justify-self-center flex items-center gap-2">
+            <span className="font-display text-xl font-bold italic tracking-tight text-white">
+              Skate<span className="text-volt-400">Fit</span>
+            </span>
+            {demoMode && <span className="chip bg-ember-500/20 text-ember-400">Demo</span>}
           </Link>
-          <div className="flex items-center gap-2">
-            {streak > 0 && (
-              <span className="chip bg-volt-500/15 text-volt-400" title="Current streak"><Icon name="local_fire_department" size={13} /> {streak}d</span>
-            )}
-            <div className="relative">
-              <button onClick={() => setMenu((v) => !v)} className="grid h-9 w-9 place-items-center rounded-full bg-ink-700 border border-white/10 text-sm font-bold text-slate-200">
-                {(user?.email || '?')[0].toUpperCase()}
-              </button>
-              {menu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />
-                  <div className="absolute right-0 mt-2 w-56 z-50 rounded-xl border border-white/10 bg-ink-800 p-2 shadow-2xl">
-                    <div className="px-3 py-2 text-xs text-slate-400 truncate">{user?.email}</div>
-                    <Link to="/profile" onClick={() => setMenu(false)} className="block rounded-lg px-3 py-2 text-sm text-slate-200 hover:bg-white/5">Profile & Settings</Link>
-                    <button onClick={signOut} className="block w-full text-left rounded-lg px-3 py-2 text-sm text-ember-400 hover:bg-white/5">Sign out</button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <Link
+            to="/achievements"
+            aria-label="Achievements"
+            className="grid h-10 w-10 place-items-center rounded-lg text-slate-200 hover:bg-white/5"
+          >
+            <Icon name="notifications" size={22} />
+          </Link>
         </div>
         <nav className="hidden sm:block border-t border-white/5">
           <div className="mx-auto max-w-5xl px-4 flex gap-1 overflow-x-auto no-scrollbar">
-            {[...PRIMARY.slice(0, 4), ...ALL_LINKS].map((l) => (
+            {[...PRIMARY, ...ALL_LINKS.filter((l) => !PRIMARY.some((p) => p.to === l.to))].map((l) => (
               <NavLink
                 key={l.to} to={l.to}
                 className={({ isActive }) => `whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 transition ${
@@ -81,6 +73,39 @@ export default function Layout({ children }) {
           </div>
         </nav>
       </header>
+
+      {/* Slide-over menu — everything that isn't one of the five tabs. */}
+      {drawer && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setDrawer(false)} />
+          <aside className="fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] overflow-y-auto bg-ink-800 border-r border-white/10 pt-[var(--sat)] pb-[var(--sab)]">
+            <div className="flex items-center justify-between px-4 h-14">
+              <span className="font-display text-lg font-bold italic text-white">Skate<span className="text-volt-400">Fit</span></span>
+              <button onClick={() => setDrawer(false)} aria-label="Close menu" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-white/5 text-xl">×</button>
+            </div>
+            <div className="px-4 py-2 text-xs text-slate-500 truncate">{user?.email}</div>
+            <div className="p-2">
+              {ALL_LINKS.map((l) => (
+                <Link
+                  key={l.to} to={l.to} onClick={() => setDrawer(false)}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+                    loc.pathname.startsWith(l.to) ? 'bg-volt-500/10 text-volt-400' : 'text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Icon name={l.icon} size={20} className="text-slate-400" />
+                  <span className="font-medium">{l.label}</span>
+                </Link>
+              ))}
+              <button
+                onClick={signOut}
+                className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ember-400 hover:bg-white/5"
+              >
+                <Icon name="arrow_back" size={20} /> Sign out
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       <main className="mx-auto max-w-5xl px-4 py-5">{children}</main>
 

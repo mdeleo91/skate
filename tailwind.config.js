@@ -10,11 +10,11 @@ export default {
     extend: {
       colors: {
         ink: {
-          900: '#0F172A', // Midnight — app background
-          800: '#1E293B', // Slate — cards, panels
-          700: '#293548', // inputs, tiles
-          600: '#334155',
-          500: '#475569',
+          900: '#070C11', // near-black (mockup) — app background
+          800: '#0D141B', // cards, panels
+          700: '#1A222C', // inputs, tiles
+          600: '#27313D',
+          500: '#3A4553',
         },
         volt: {
           // Skate Teal — primary accent

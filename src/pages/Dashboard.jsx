@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import Icon from '../components/icons'
 import WeighInModal from '../components/WeighInModal'
-import { Card, Stat, Bar, Ring, Sparkline, SectionTitle } from '../components/ui'
+import { Card, Bar, Sparkline, SectionTitle } from '../components/ui'
 import { ACHIEVEMENTS } from '../lib/achievements'
 import { useWeather, scoreConditions } from '../lib/weather'
 
@@ -41,56 +41,82 @@ export default function Dashboard() {
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {movedToday
-            ? `${d.activeMinutesToday} active minutes logged. That's the whole ask.`
+            ? "Let's keep this momentum going!"
             : 'Even 15 easy minutes keeps the streak alive.'}
         </p>
       </div>
 
       <ConditionsBanner />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="col-span-2 sm:col-span-2 flex items-center gap-4">
-          <Ring
-            value={Math.max(0, d.budget.target - d.remaining)}
-            goal={d.budget.target}
-            label={d.remaining.toLocaleString()}
-            sub="cal remaining"
-          />
-          <div className="flex-1 space-y-2.5 text-sm">
-            <div className="flex justify-between"><span className="text-slate-400">Base goal</span><span className="tabular-nums font-semibold">{d.budget.target.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Consumed</span><span className="tabular-nums font-semibold text-ember-400">−{d.consumed.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Burned</span><span className="tabular-nums font-semibold text-volt-400">+{d.burned.toLocaleString()}</span></div>
-            <Link to="/nutrition" className="btn-ghost w-full !py-1.5 text-xs mt-1">Log food</Link>
-          </div>
-        </Card>
+      {/* Energy budget — ring left, ledger right, exactly like the mock */}
+      <Card className="flex items-center gap-5">
+        <CalorieRing remaining={d.remaining} total={d.budget.target + d.burned} />
+        <div className="flex-1 space-y-2.5 text-sm border-l border-white/5 pl-5">
+          <div className="flex justify-between"><span className="text-slate-400">Base goal</span><span className="tabular-nums font-semibold">{d.budget.target.toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">Consumed</span><span className="tabular-nums font-semibold text-ember-400">−{d.consumed.toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">Burned</span><span className="tabular-nums font-semibold text-volt-400">+{d.burned.toLocaleString()}</span></div>
+          <Link to="/nutrition" className="btn-ghost w-full !py-2 text-sm mt-1 !justify-between">Log Food <Icon name="arrow_forward" size={16} /></Link>
+        </div>
+      </Card>
 
-        <Card>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Today's Skate</div>
-          <div className="metric mt-1 text-volt-400">{d.milesToday.toFixed(1)}<span className="text-base text-slate-500 ml-1">mi</span></div>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <StatCard label="Today's Skate" icon="roller_skating" iconClass="text-slate-300" value={d.milesToday.toFixed(1)} unit="mi" valueClass="text-volt-400" sub={`${dailyMilesGoal} mi daily target`}>
           <Bar value={d.milesToday} goal={dailyMilesGoal} className="mt-2" />
-          <div className="text-xs text-slate-500 mt-1.5">{dailyMilesGoal} mi daily target</div>
-        </Card>
-
-        <Card>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Water</div>
-          <div className="metric mt-1 text-surge-400">{d.waterToday}<span className="text-base text-slate-500 ml-1">oz</span></div>
+        </StatCard>
+        <StatCard label="Water" icon="water_drop" iconClass="text-surge-400" value={d.waterToday} unit="oz" valueClass="text-surge-400">
           <Bar value={d.waterToday} goal={profile.waterGoalOz} color="bg-surge-500" className="mt-2" />
           <div className="mt-2 flex gap-1.5">
             {[8, 16].map((oz) => (
-              <button key={oz} onClick={() => addWater(oz)} className="btn-ghost flex-1 !py-1 !px-2 text-xs">+{oz}oz</button>
+              <button key={oz} onClick={() => addWater(oz)} className="btn-ghost flex-1 !py-1 !px-2 text-xs">+{oz} oz</button>
             ))}
           </div>
-        </Card>
+        </StatCard>
+        <StatCard
+          label="Calories Consumed" icon="local_fire_department" iconClass="text-amber-500"
+          value={d.consumed.toLocaleString()}
+          sub={d.consumed <= d.budget.target
+            ? `${Math.round((1 - d.consumed / d.budget.target) * 100)}% under`
+            : `${Math.round((d.consumed / d.budget.target - 1) * 100)}% over`}
+        />
+        <StatCard label="Calories Burned" icon="local_fire_department" iconClass="text-volt-400" value={d.burned.toLocaleString()} valueClass="text-volt-400" sub="From activity today" />
+        <StatCard label="Active Minutes" icon="timer" iconClass="text-volt-400" value={d.activeMinutesToday} sub="Today" />
+        <StatCard label="Current Streak" icon="local_fire_department" iconClass="text-ember-400" value={`${d.streak}d`} valueClass="text-ember-400" sub={`Best: ${d.bestStreak}d`} />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Calories Consumed" value={d.consumed.toLocaleString()} sub={`${d.macrosToday.protein}g protein`} />
-        <Stat label="Calories Burned" value={d.burned.toLocaleString()} accent="text-volt-400" sub="from activity today" />
-        <Stat label="Active Minutes" value={d.activeMinutesToday} sub="today" />
-        <Stat label="Current Streak" value={`${d.streak}d`} accent="text-ember-400" sub={`best: ${d.bestStreak}d`} />
-      </div>
+      <CalorieTrendCard meals={data.meals} />
 
-      <div className="grid sm:grid-cols-2 gap-3">
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Next Goal</div>
+          <Link to="/achievements" className="flex items-center gap-1 text-xs text-slate-400 font-semibold hover:text-slate-200">
+            All Goals <Icon name="arrow_forward" size={14} />
+          </Link>
+        </div>
+        {nextGoal ? (
+          <>
+            <div className="flex items-center gap-4 mt-3">
+              <span
+                className="grid h-14 w-14 shrink-0 place-items-center bg-volt-500/12 text-volt-400"
+                style={{ clipPath: 'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)' }}
+              >
+                <Icon name={nextGoal.icon} size={26} />
+              </span>
+              <div className="min-w-0">
+                <div className="font-display font-bold text-white">{nextGoal.name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{nextGoal.desc}</div>
+              </div>
+            </div>
+            <Bar value={nextGoal.cur} goal={nextGoal.goal} className="mt-3" />
+            <div className="text-xs text-volt-400 mt-1.5 tabular-nums font-semibold">
+              {Math.round(nextGoal.cur * 10) / 10} / {nextGoal.goal} there — {Math.round(nextGoal.pct)}%
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-slate-400 mt-2">Every achievement unlocked. Remarkable.</div>
+        )}
+      </Card>
+
+      <div className="grid sm:grid-cols-1 gap-3">
         <Card>
           <SectionTitle
             action={(
@@ -131,27 +157,6 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
-
-        <Card>
-          <SectionTitle action={<Link to="/achievements" className="text-xs text-volt-400 font-semibold">All</Link>}>Next Goal</SectionTitle>
-          {nextGoal ? (
-            <>
-              <div className="flex items-center gap-3">
-                <span className="text-volt-400"><Icon name={nextGoal.icon} size={32} /></span>
-                <div>
-                  <div className="font-display font-bold text-white">{nextGoal.name}</div>
-                  <div className="text-xs text-slate-400">{nextGoal.desc}</div>
-                </div>
-              </div>
-              <Bar value={nextGoal.cur} goal={nextGoal.goal} className="mt-3" color="bg-surge-500" />
-              <div className="text-xs text-slate-500 mt-1.5 tabular-nums">
-                {Math.round(nextGoal.cur * 10) / 10} / {nextGoal.goal} — {Math.round(nextGoal.pct)}% there
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-slate-400">Every achievement unlocked. Remarkable.</div>
-          )}
-        </Card>
       </div>
 
       <WeighInModal open={weighIn} onClose={() => setWeighIn(false)} />
@@ -171,7 +176,7 @@ function ConditionsBanner() {
           <span className={`shrink-0 ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}><Icon name={s.icon} size={30} /></span>
           <div className="min-w-0 flex-1">
             <div className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{s.verdict}</div>
-            <div className="text-xs text-slate-400 truncate">{wx.w.temp}°F · {wx.w.wind} mph wind · {wx.w.rain}% rain</div>
+            <div className="text-xs text-slate-400 truncate">{wx.w.temp}°F • {wx.w.wind} mph wind • {wx.w.rain}% rain</div>
           </div>
           <div className="text-right shrink-0">
             <div className={`font-display text-2xl font-bold tabular-nums ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}>{s.score}</div>
@@ -189,6 +194,126 @@ function ConditionsBanner() {
         </>
       )}
     </Link>
+  )
+}
+
+// Gradient goal ring — remaining calories of the adjusted daily budget.
+function CalorieRing({ remaining, total }) {
+  const size = 150
+  const stroke = 13
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id="calRing" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#2DD4BF" />
+            <stop offset="100%" stopColor="#4ADE80" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} stroke="url(#calRing)" strokeWidth={stroke} fill="none"
+          strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
+        <div className="font-display text-[26px] font-bold tabular-nums text-white leading-none">{remaining.toLocaleString()}</div>
+        <div className="text-[11px] text-slate-400 mt-1">of {total.toLocaleString()} kcal</div>
+        <div className="text-[10px] text-volt-400 mt-0.5 font-semibold">{Math.round(pct * 100)}% of goal</div>
+      </div>
+    </div>
+  )
+}
+
+// Mock-style stat tile: label + icon up top, big number, optional extras.
+function StatCard({ label, icon, iconClass = 'text-slate-400', value, unit, valueClass = 'text-white', sub, children }) {
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+        {icon && <span className={`shrink-0 ${iconClass}`}><Icon name={icon} size={20} /></span>}
+      </div>
+      <div className={`metric mt-1 ${valueClass}`}>
+        {value}{unit && <span className="text-base text-slate-500 ml-1">{unit}</span>}
+      </div>
+      {children}
+      {sub && <div className="text-xs text-slate-500 mt-1.5">{sub}</div>}
+    </Card>
+  )
+}
+
+// Daily calories consumed over the last four weeks, with the average dashed
+// in and a delta vs the four weeks before. Hidden until there's enough data.
+function CalorieTrendCard({ meals }) {
+  const now = new Date()
+  const dayMs = 24 * 3600 * 1000
+  const cutoff = new Date(now.getTime() - 27 * dayMs)
+  const prevCutoff = new Date(now.getTime() - 55 * dayMs)
+  const byDay = {}
+  for (const m of meals || []) {
+    const t = new Date(m.date + 'T12:00')
+    if (t >= prevCutoff) byDay[m.date] = (byDay[m.date] || 0) + (m.calories || 0)
+  }
+  const entries = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0]))
+  const cur = entries.filter(([k]) => new Date(k + 'T12:00') >= cutoff)
+  if (cur.length < 3) return null
+
+  const values = cur.map(([, v]) => v)
+  const avg = Math.round(values.reduce((a, v) => a + v, 0) / values.length)
+  const prev = entries.filter(([k]) => new Date(k + 'T12:00') < cutoff).map(([, v]) => v)
+  const prevAvg = prev.length >= 3 ? prev.reduce((a, v) => a + v, 0) / prev.length : null
+  const delta = prevAvg ? Math.round(((avg - prevAvg) / prevAvg) * 100) : null
+
+  // Chart geometry
+  const W = 300, H = 76
+  const lo = Math.min(...values), hi = Math.max(...values)
+  const span = Math.max(1, hi - lo)
+  const x = (i) => (values.length > 1 ? (i / (values.length - 1)) * W : W / 2)
+  const y = (v) => H - 6 - ((v - lo) / span) * (H - 16)
+  const line = values.map((v, i) => `${x(i)},${y(v)}`).join(' ')
+  const fmtDate = (iso) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`
+  const ticks = [cur[0][0], cur[Math.floor(cur.length / 2)][0], cur[cur.length - 1][0]]
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Calorie Trend</div>
+        <Link to="/nutrition" aria-label="Nutrition" className="text-slate-400 hover:text-slate-200"><Icon name="arrow_forward" size={16} /></Link>
+      </div>
+      <div className="flex items-baseline gap-2 mt-1">
+        <span className="font-display text-2xl font-bold tabular-nums text-white">{avg.toLocaleString()}</span>
+        <span className="text-sm text-slate-400">Avg</span>
+      </div>
+      <div className="flex items-center gap-3 mt-1">
+        <div className="flex-1 min-w-0">
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="calTrend" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <polygon points={`0,${H} ${line} ${W},${H}`} fill="url(#calTrend)" />
+            <polyline points={line} fill="none" stroke="#2DD4BF" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            <line x1="0" y1={y(avg)} x2={W} y2={y(avg)} stroke="rgba(255,255,255,0.35)" strokeWidth="1" strokeDasharray="4 4" />
+          </svg>
+          <div className="flex justify-between text-[10px] text-slate-500 tabular-nums mt-0.5">
+            {ticks.map((t) => <span key={t}>{fmtDate(t)}</span>)}
+          </div>
+        </div>
+        {delta != null && (
+          <div className={`shrink-0 text-right text-xs leading-tight ${delta <= 0 ? 'text-volt-400' : 'text-ember-400'}`}>
+            <div className="font-semibold flex items-center justify-end gap-0.5">
+              <Icon name="arrow_downward" size={13} className={delta > 0 ? 'rotate-180' : ''} /> {Math.abs(delta)}%
+            </div>
+            <div className="text-slate-500 mt-0.5">vs last<br />4 weeks</div>
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 
