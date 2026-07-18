@@ -45,9 +45,7 @@ export default function Layout({ children }) {
             <Icon name="menu" size={24} />
           </button>
           <Link to="/" className="justify-self-center flex items-center gap-2">
-            <span className="font-display text-xl font-bold italic tracking-tight text-white">
-              Skate<span className="text-volt-400">Fit</span>
-            </span>
+            <img src="/wordmark.svg" alt="SkateFit" className="h-[20px]" />
             {demoMode && <span className="chip bg-ember-500/20 text-ember-400">Demo</span>}
           </Link>
           <Link
@@ -80,7 +78,10 @@ export default function Layout({ children }) {
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setDrawer(false)} />
           <aside className="fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] overflow-y-auto bg-ink-800 border-r border-white/10 pt-[var(--sat)] pb-[var(--sab)]">
             <div className="flex items-center justify-between px-4 h-14">
-              <span className="font-display text-lg font-bold italic text-white">Skate<span className="text-volt-400">Fit</span></span>
+              <span className="flex items-center gap-2">
+                <img src="/brand-icon.svg" alt="" className="h-7 w-7" />
+                <img src="/wordmark.svg" alt="SkateFit" className="h-[16px]" />
+              </span>
               <button onClick={() => setDrawer(false)} aria-label="Close menu" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-white/5 text-xl">×</button>
             </div>
             <div className="px-4 py-2 text-xs text-slate-500 truncate">{user?.email}</div>

@@ -34,8 +34,8 @@ export default function Login() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       <div className="lg:w-1/2 px-6 pt-[calc(3rem+var(--sat))] pb-8 lg:p-14 lg:flex lg:flex-col lg:justify-center">
         <div className="flex items-center gap-2.5">
-          <img src="/pwa-192x192.png" alt="" className="h-11 w-11 rounded-xl shadow-glow" />
-          <span className="font-display text-2xl font-bold tracking-tight text-white">Skate<span className="text-volt-400">Fit</span></span>
+          <img src="/brand-icon.svg" alt="" className="h-12 w-12" />
+          <img src="/wordmark.svg" alt="SkateFit" className="h-[26px]" />
         </div>
         <h1 className="mt-8 font-display text-4xl lg:text-5xl font-bold leading-[1.08] text-white">
           The goal isn't to lose weight.<br />
