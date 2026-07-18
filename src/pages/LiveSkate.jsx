@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
-import { ROUGH_RMS } from '../lib/track'
+import { ROUGH_RMS, cleanRoughness } from '../lib/track'
 import { isNativeApp, startLocationWatch, Roughness } from '../lib/geo'
 import { dlog } from '../lib/debugLog'
 import { RouteMap, Modal } from '../components/ui'
@@ -358,7 +358,7 @@ export default function LiveSkate() {
 
   function save() {
     const hrs = hrSamples.current
-    const rs = points.map((p) => p.r).filter((v) => v != null)
+    const rs = cleanRoughness(points).filter((v) => v != null)
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
     const coveragePct = points.length ? Math.round((rs.length / points.length) * 100) : 0
     const finalElapsed = elapsedSec()

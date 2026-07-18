@@ -6,7 +6,7 @@ import Icon from '../components/icons'
 import TrackMap from '../components/TrackMap'
 import { getSkateType } from '../lib/skateTypes'
 import { fmtDuration, fmtPace } from '../lib/calc'
-import { computeSplits, terrainStats } from '../lib/track'
+import { computeSplits, terrainStats, levelHistogram, levelColor } from '../lib/track'
 
 const TABS = ['Overview', 'Splits', 'Map']
 
@@ -58,11 +58,12 @@ export default function SkateDetail() {
     } catch { /* user cancelled */ }
   }
 
-  // Recompute from the route when possible — it applies frozen-sensor cleanup
-  // that saved terrain objects from older builds don't have.
+  // Recompute from the route when possible — it applies frozen-sensor and
+  // spike cleanup that saved terrain objects from older builds don't have.
   const terrain = terrainStats(w.route) || w.terrain
   const surfCov = terrain?.coveragePct ?? null
   const partialSurface = surfCov != null && surfCov < 90
+  const rough = levelHistogram(w.route)
   const rows = [
     ...(w.miles > 0 ? [
       ['Avg Speed', w.movingSec != null ? `${w.avgSpeed} mph moving` : `${w.avgSpeed} mph`],
@@ -126,9 +127,9 @@ export default function SkateDetail() {
 
               <div className="divide-y divide-white/5">
                 {rows.map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-3 text-[15px]">
-                    <span className="text-slate-300">{k}</span>
-                    <span className="text-white font-semibold tabular-nums">{v}</span>
+                  <div key={k} className="flex justify-between gap-4 py-3 text-[15px]">
+                    <span className="text-slate-300 shrink-0">{k}</span>
+                    <span className="text-white font-semibold tabular-nums text-right">{v}</span>
                   </div>
                 ))}
               </div>
@@ -149,6 +150,35 @@ export default function SkateDetail() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {rough && (
+                <div className="card-tight mt-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Surface Roughness</div>
+                    <div className="text-sm text-slate-300">avg <span className="font-display font-bold text-white tabular-nums">{rough.avg}</span><span className="text-slate-500">/10</span></div>
+                  </div>
+                  <div className="flex items-end gap-1 h-16">
+                    {rough.pcts.map((pct, i) => (
+                      <div key={i} className="flex-1 flex flex-col justify-end h-full">
+                        <div
+                          className="rounded-t"
+                          style={{ height: `${Math.max(pct > 0 ? 6 : 2, pct)}%`, background: pct > 0 ? levelColor(i + 1) : 'rgba(255,255,255,0.07)' }}
+                          title={`Level ${i + 1}: ${pct}%`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>1 · glass</span>
+                    <span>5 | 6 · smooth/rough line</span>
+                    <span>10 · gravel</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                    Share of the sampled trace at each roughness level. Handling spikes (like pulling
+                    the phone out to check it) are filtered out.
+                  </p>
                 </div>
               )}
 

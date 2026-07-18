@@ -30,11 +30,23 @@ export function speedColor(mph, min, max) {
 // Above this 1-second RMS, pavement reads as rough chip-seal / bad asphalt.
 export const ROUGH_RMS = 2.2
 
+// 10-degree roughness scale. Levels 1–5 span the smooth range (≤ ROUGH_RMS),
+// 6–10 the rough range, so the binary smooth/rough split sits exactly on the
+// 5/6 boundary and the two views never disagree. Level 10 saturates at
+// 6 m/s² — beyond that it's all just gravel.
+export function roughnessLevel(r) {
+  if (r == null) return null
+  if (r <= ROUGH_RMS) return Math.max(1, Math.ceil((r - 0.6) / ((ROUGH_RMS - 0.6) / 5)))
+  return Math.min(10, 6 + Math.floor((r - ROUGH_RMS) / ((6.0 - ROUGH_RMS) / 5)))
+}
+
+export function levelColor(level) {
+  return `hsl(${150 - (level - 1) * (130 / 9)}, 85%, 55%)`
+}
+
 export function surfaceColor(r) {
   if (r == null) return '#64748b' // no data — neutral slate
-  const t = Math.max(0, Math.min(1, (r - 1) / 3)) // 1 m/s² smooth → 4 m/s² brutal
-  const hue = 150 - t * 130
-  return `hsl(${hue}, 85%, 55%)`
+  return levelColor(roughnessLevel(r))
 }
 
 // A frozen sensor used to leave the last live RMS stamped on every later
@@ -42,10 +54,14 @@ export function surfaceColor(r) {
 // repeats to two decimals this many times in a row, so long identical runs
 // are provably dead data — strip them so old skates read honestly.
 const FROZEN_RUN = 6 // consecutive fixes can legitimately share one 1 Hz sample window; hundreds can't
+const SPIKE_WINDOW = 5 // neighbors on each side used to judge a spike
+const SPIKE_RATIO = 2.5 // a reading this far above the local median isn't pavement
 
 export function cleanRoughness(route) {
   const pts = route || []
   const out = pts.map((p) => p.r)
+
+  // Frozen runs: a dead sensor's last value carried forward.
   let start = 0
   for (let i = 1; i <= pts.length; i++) {
     if (i < pts.length && pts[i].r != null && pts[i].r === pts[start].r) continue
@@ -54,7 +70,43 @@ export function cleanRoughness(route) {
     }
     start = i
   }
+
+  // Spikes: pulling the phone from a pocket (or one hard jolt) reads as a
+  // towering outlier against the surrounding pavement — drop it rather than
+  // let a moment of handling paint the road rough. Judged against a snapshot
+  // so earlier removals don't shift later medians.
+  const base = out.slice()
+  for (let i = 0; i < base.length; i++) {
+    const v = base[i]
+    if (v == null) continue
+    const nb = []
+    for (let j = Math.max(0, i - SPIKE_WINDOW); j <= Math.min(base.length - 1, i + SPIKE_WINDOW); j++) {
+      if (j !== i && base[j] != null) nb.push(base[j])
+    }
+    if (nb.length < 3) continue
+    const med = nb.sort((a, b) => a - b)[Math.floor(nb.length / 2)]
+    if (v > 3 && v > SPIKE_RATIO * med) out[i] = null
+  }
+
   return out
+}
+
+// Distribution across the 10 roughness levels — pct of sampled trace at each
+// level, plus the average level. Null when there's too little data to mean much.
+export function levelHistogram(route) {
+  const rs = cleanRoughness(route).filter((v) => v != null)
+  if (rs.length < 5) return null
+  const counts = Array(10).fill(0)
+  let sum = 0
+  for (const v of rs) {
+    const lv = roughnessLevel(v)
+    counts[lv - 1]++
+    sum += lv
+  }
+  return {
+    pcts: counts.map((c) => Math.round((c / rs.length) * 100)),
+    avg: +(sum / rs.length).toFixed(1),
+  }
 }
 
 // Share of the trace with vibration data that reads rough vs smooth.
