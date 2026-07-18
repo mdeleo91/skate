@@ -50,7 +50,7 @@ export default function Dashboard() {
 
       {/* Energy budget — ring left, ledger right, exactly like the mock */}
       <Card className="flex items-center gap-5">
-        <CalorieRing remaining={d.remaining} total={d.budget.target + d.burned} />
+        <CalorieRing consumed={d.consumed} total={d.budget.target + d.burned} />
         <div className="flex-1 space-y-2.5 text-sm border-l border-white/5 pl-5">
           <div className="flex justify-between"><span className="text-slate-400">Base goal</span><span className="tabular-nums font-semibold">{d.budget.target.toLocaleString()}</span></div>
           <div className="flex justify-between"><span className="text-slate-400">Consumed</span><span className="tabular-nums font-semibold text-ember-400">−{d.consumed.toLocaleString()}</span></div>

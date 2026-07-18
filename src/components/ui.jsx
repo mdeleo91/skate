@@ -56,13 +56,13 @@ export function Ring({ value, goal, size = 132, stroke = 12, label, sub, color =
 }
 
 // The calorie goal ring, shared by Home and Nutrition so the two pages can
-// never disagree: the big number is calories REMAINING out of the adjusted
-// daily budget (base goal + exercise burned).
-export function CalorieRing({ remaining, total, size = 150 }) {
+// never disagree: the big number is calories CONSUMED, filling up toward the
+// adjusted daily budget (base goal + exercise burned).
+export function CalorieRing({ consumed, total, size = 150 }) {
   const stroke = 13
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
+  const pct = total > 0 ? Math.max(0, Math.min(1, consumed / total)) : 0
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
@@ -80,8 +80,8 @@ export function CalorieRing({ remaining, total, size = 150 }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
-        <div className="font-display text-[26px] font-bold tabular-nums text-white leading-none">{remaining.toLocaleString()}</div>
-        <div className="text-[11px] text-slate-400 mt-1">of {total.toLocaleString()} cal left</div>
+        <div className="font-display text-[26px] font-bold tabular-nums text-white leading-none">{consumed.toLocaleString()}</div>
+        <div className="text-[11px] text-slate-400 mt-1">of {total.toLocaleString()} cal</div>
         <div className="text-[10px] text-volt-400 mt-0.5 font-semibold">{Math.round(pct * 100)}% of goal</div>
       </div>
     </div>

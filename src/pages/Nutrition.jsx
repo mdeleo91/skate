@@ -110,9 +110,9 @@ function TodayTab() {
 
       <Card className="flex flex-col sm:flex-row items-center gap-5">
         <div className="flex flex-col items-center">
-          <CalorieRing remaining={d.remaining} total={d.budget.target + d.burned} />
+          <CalorieRing consumed={d.consumed} total={d.budget.target + d.burned} />
           <div className="text-[11px] text-slate-500 mt-2 tabular-nums">
-            {d.consumed.toLocaleString()} eaten · +{d.burned.toLocaleString()} earned skating
+            {d.remaining.toLocaleString()} left · +{d.burned.toLocaleString()} earned skating
           </div>
         </div>
         <div className="flex-1 w-full grid grid-cols-3 gap-3">
