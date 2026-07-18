@@ -55,6 +55,39 @@ export function Ring({ value, goal, size = 132, stroke = 12, label, sub, color =
   )
 }
 
+// The calorie goal ring, shared by Home and Nutrition so the two pages can
+// never disagree: the big number is calories REMAINING out of the adjusted
+// daily budget (base goal + exercise burned).
+export function CalorieRing({ remaining, total, size = 150 }) {
+  const stroke = 13
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id="calRing" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#2DD4BF" />
+            <stop offset="100%" stopColor="#4ADE80" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} stroke="url(#calRing)" strokeWidth={stroke} fill="none"
+          strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
+          style={{ transition: 'stroke-dashoffset 700ms ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
+        <div className="font-display text-[26px] font-bold tabular-nums text-white leading-none">{remaining.toLocaleString()}</div>
+        <div className="text-[11px] text-slate-400 mt-1">of {total.toLocaleString()} cal left</div>
+        <div className="text-[10px] text-volt-400 mt-0.5 font-semibold">{Math.round(pct * 100)}% of goal</div>
+      </div>
+    </div>
+  )
+}
+
 export function Sparkline({ data, width = 300, height = 70, color = '#2DD4BF', fill = true, trend }) {
   if (!data || data.length < 2) return <div className="h-[70px] grid place-items-center text-xs text-slate-500">Not enough data yet</div>
   const min = Math.min(...data)

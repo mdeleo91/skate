@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import Icon from '../components/icons'
 import WeighInModal from '../components/WeighInModal'
-import { Card, Bar, Sparkline, SectionTitle } from '../components/ui'
+import { Card, Bar, Sparkline, SectionTitle, CalorieRing } from '../components/ui'
 import { ACHIEVEMENTS } from '../lib/achievements'
 import { useWeather, scoreConditions } from '../lib/weather'
 
@@ -194,37 +194,6 @@ function ConditionsBanner() {
         </>
       )}
     </Link>
-  )
-}
-
-// Gradient goal ring — remaining calories of the adjusted daily budget.
-function CalorieRing({ remaining, total }) {
-  const size = 150
-  const stroke = 13
-  const r = (size - stroke) / 2
-  const c = 2 * Math.PI * r
-  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <defs>
-          <linearGradient id="calRing" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2DD4BF" />
-            <stop offset="100%" stopColor="#4ADE80" />
-          </linearGradient>
-        </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} fill="none" />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} stroke="url(#calRing)" strokeWidth={stroke} fill="none"
-          strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
-        <div className="font-display text-[26px] font-bold tabular-nums text-white leading-none">{remaining.toLocaleString()}</div>
-        <div className="text-[11px] text-slate-400 mt-1">of {total.toLocaleString()} kcal</div>
-        <div className="text-[10px] text-volt-400 mt-0.5 font-semibold">{Math.round(pct * 100)}% of goal</div>
-      </div>
-    </div>
   )
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
-import { Card, SectionTitle, Bar, Modal, Ring } from '../components/ui'
+import { Card, SectionTitle, Bar, Modal, CalorieRing } from '../components/ui'
 import Icon from '../components/icons'
 import { FOODS, MEAL_SLOTS } from '../lib/foods'
 import { DRINKS } from '../lib/drinks'
@@ -109,7 +109,12 @@ function TodayTab() {
       )}
 
       <Card className="flex flex-col sm:flex-row items-center gap-5">
-        <Ring value={d.consumed} goal={d.budget.target} label={d.consumed.toLocaleString()} sub={`of ${d.budget.target.toLocaleString()} cal`} />
+        <div className="flex flex-col items-center">
+          <CalorieRing remaining={d.remaining} total={d.budget.target + d.burned} />
+          <div className="text-[11px] text-slate-500 mt-2 tabular-nums">
+            {d.consumed.toLocaleString()} eaten · +{d.burned.toLocaleString()} earned skating
+          </div>
+        </div>
         <div className="flex-1 w-full grid grid-cols-3 gap-3">
           <MacroBar label="Protein" v={M.protein} g={T.protein} color="bg-volt-500" />
           <MacroBar label="Carbs" v={M.carbs} g={T.carbs} color="bg-surge-500" />

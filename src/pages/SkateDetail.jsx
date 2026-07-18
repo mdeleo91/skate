@@ -42,7 +42,7 @@ export default function SkateDetail() {
     w.avgSpeed > 0 && w.avgSpeed >= prs.fastestAvg && { icon: 'bolt', label: 'Fastest Avg Speed', value: `${w.avgSpeed.toFixed(1)} mph` },
     w.topSpeed > 0 && w.topSpeed >= prs.fastestTop && { icon: 'rocket_launch', label: 'Fastest Top Speed', value: `${w.topSpeed.toFixed(1)} mph` },
     w.minutes > 0 && w.minutes >= prs.longestWorkout && { icon: 'timer', label: 'Longest Session', value: fmtDuration(durationSec) },
-    w.calories > 0 && w.calories >= prs.mostCalories && { icon: 'local_fire_department', label: 'Most Calories', value: `${w.calories} kcal` },
+    w.calories > 0 && w.calories >= prs.mostCalories && { icon: 'local_fire_department', label: 'Most Calories', value: `${w.calories} cal` },
   ].filter(Boolean).slice(0, 3)
 
   const fav = data.favoriteRoutes.some((r) => r.name === w.name)
@@ -122,7 +122,7 @@ export default function SkateDetail() {
               <div className="grid grid-cols-3 border-y border-white/10 py-4">
                 <BigStat value={w.miles ? w.miles.toFixed(2) : '—'} unit="miles" />
                 <BigStat value={fmtDuration(durationSec)} unit="time" className="border-x border-white/10" />
-                <BigStat value={w.calories} unit="kcal" />
+                <BigStat value={w.calories} unit="cal" />
               </div>
 
               <div className="divide-y divide-white/5">
