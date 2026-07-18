@@ -3,6 +3,11 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
+import { installDebugLog } from './lib/debugLog'
+import { BUILD_ID } from './lib/appUpdate'
+import { isNativeApp } from './lib/geo'
+
+installDebugLog({ build: BUILD_ID, native: isNativeApp })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

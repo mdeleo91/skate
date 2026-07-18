@@ -5,6 +5,7 @@ import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
 import { ROUGH_RMS } from '../lib/track'
 import { isNativeApp, startLocationWatch, Roughness } from '../lib/geo'
+import { dlog } from '../lib/debugLog'
 import { RouteMap, Modal } from '../components/ui'
 import Icon from '../components/icons'
 
@@ -44,6 +45,8 @@ export default function LiveSkate() {
   const hrSamples = useRef([])
   const motionBuf = useRef([])
   const motionSeen = useRef(false)
+  const motionSamples = useRef(null)    // samples in the last native read (debug log)
+  const motionReadFailed = useRef(false)
   const roughRms = useRef(null)
   const motionHandler = useRef(null)
   const wakeLock = useRef(null)
@@ -109,14 +112,32 @@ export default function LiveSkate() {
     if (Roughness) {
       Roughness.read()
         .then(({ rms, samples }) => {
+          motionSamples.current = samples
           if (samples > 3 && rms >= 0) roughRms.current = +rms.toFixed(2)
         })
-        .catch(() => {})
+        .catch((e) => {
+          if (!motionReadFailed.current) {
+            motionReadFailed.current = true
+            dlog('motion:read-error', String(e?.message ?? e).slice(0, 200), { critical: true })
+          }
+        })
     }
     const { latitude: lat, longitude: lon, altitude, speed: mps, accuracy } = pos.coords
-    if (accuracy && accuracy > 50) return // ignore garbage fixes
+    if (accuracy && accuracy > 50) {
+      dlog('fix:rejected', { acc: Math.round(accuracy) })
+      return // ignore garbage fixes
+    }
     const t = pos.timestamp || Date.now()
     const p = { lat, lon, t, r: roughRms.current ?? undefined }
+    // One compact entry per fix — accuracy, speed, vibration RMS and how many
+    // accelerometer samples fed it. This is the data that shows sensor
+    // throttling or a mid-skate death in the debug log.
+    dlog('fix', {
+      acc: accuracy != null ? Math.round(accuracy) : undefined,
+      mph: mps != null ? +mphFromMps(mps).toFixed(1) : undefined,
+      r: roughRms.current ?? undefined,
+      n: motionSamples.current ?? undefined,
+    })
 
     let mph = null
     let dtSec = null
@@ -183,15 +204,20 @@ export default function LiveSkate() {
       try {
         await Roughness.start()
         motionSeen.current = true
+        dlog('motion:native-started', null, { critical: true })
         return
-      } catch { /* no accelerometer — fall through to the web path */ }
+      } catch (e) {
+        dlog('motion:native-failed', String(e?.message ?? e).slice(0, 200), { critical: true })
+        /* no accelerometer — fall through to the web path */
+      }
     }
     try {
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         const res = await DeviceMotionEvent.requestPermission()
-        if (res !== 'granted') return
+        if (res !== 'granted') { dlog('motion:web-denied', null, { critical: true }); return }
       }
       startMotion()
+      dlog('motion:web-started', null, { critical: true })
     } catch { /* no accelerometer access */ }
   }
 
@@ -239,10 +265,14 @@ export default function LiveSkate() {
   }, [status, mode, type.id])
 
   async function startGps() {
+    dlog('session:start', { type: typeId, mode: 'gps' }, { critical: true })
     try {
-      watcher.current = await startLocationWatch(handlePosition, (err) =>
-        setGpsError(err?.message || 'Location unavailable — switch to demo mode to keep tracking time.'))
+      watcher.current = await startLocationWatch(handlePosition, (err) => {
+        dlog('gps:error', String(err?.message ?? err).slice(0, 200), { critical: true })
+        setGpsError(err?.message || 'Location unavailable — switch to demo mode to keep tracking time.')
+      })
     } catch (e) {
+      dlog('gps:start-failed', String(e?.message ?? e).slice(0, 200), { critical: true })
       setGpsError(e.message)
       return startDemo()
     }
@@ -255,6 +285,7 @@ export default function LiveSkate() {
   }
 
   function startDemo() {
+    dlog('session:start', { type: typeId, mode: 'demo' }, { critical: true })
     acquireWakeLock()
     startedAt.current = new Date().toISOString()
     startTs.current = Date.now()
@@ -271,6 +302,11 @@ export default function LiveSkate() {
     wakeLock.current = null
   }
   useEffect(() => () => {
+    // Leaving the live screen mid-session (back button, navigation) kills
+    // tracking — if the log ends here, it was a navigation, not a crash.
+    if (statusRef.current === 'running' || statusRef.current === 'paused') {
+      dlog('session:unmounted-while-tracking', { status: statusRef.current }, { critical: true })
+    }
     stopWatch()
     releaseWakeLock()
     Roughness?.stop().catch(() => {})
@@ -278,6 +314,7 @@ export default function LiveSkate() {
   }, [])
 
   function pause() {
+    dlog('ui:pause', null, { critical: true })
     pauseStart.current = Date.now()
     setStatus('paused')
     setSpeed(0)
@@ -285,6 +322,7 @@ export default function LiveSkate() {
     setSurface(null)
   }
   function resume() {
+    dlog('ui:resume', null, { critical: true })
     if (pauseStart.current != null) {
       pausedMs.current += Date.now() - pauseStart.current
       pauseStart.current = null
@@ -295,6 +333,7 @@ export default function LiveSkate() {
     acquireWakeLock()
   }
   function finish() {
+    dlog('ui:finish', { points: points.length, miles: +miles.toFixed(2) }, { critical: true })
     doneAt.current = pauseStart.current ?? Date.now()
     stopWatch()
     releaseWakeLock()
@@ -304,6 +343,7 @@ export default function LiveSkate() {
     setSaveOpen(true)
   }
   function lap() {
+    dlog('ui:lap', null, { critical: true })
     setLaps((l) => [...l, { n: l.length + 1, atSec: elapsedSec(), miles: +miles.toFixed(2), avg: +avgSpeed.toFixed(1) }])
   }
 
@@ -313,6 +353,9 @@ export default function LiveSkate() {
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
     const coveragePct = points.length ? Math.round((rs.length / points.length) * 100) : 0
     const finalElapsed = elapsedSec()
+    dlog('session:finish', {
+      miles: +miles.toFixed(2), durationSec: finalElapsed, points: points.length, coveragePct,
+    }, { critical: true })
     const id = data.addWorkout({
       date: todayISO(),
       kind: 'skate',
