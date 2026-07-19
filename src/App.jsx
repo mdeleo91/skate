@@ -19,6 +19,7 @@ import Challenges from './pages/Challenges'
 import Gear from './pages/Gear'
 import Stats from './pages/Stats'
 import RoutesPage from './pages/RoutesPage'
+import Trails from './pages/Trails'
 import Weather from './pages/Weather'
 import Profile from './pages/Profile'
 import Progress from './pages/Progress'
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/gear" element={<Protected><Gear /></Protected>} />
           <Route path="/stats" element={<Protected><Stats /></Protected>} />
           <Route path="/routes" element={<Protected><RoutesPage /></Protected>} />
+          <Route path="/trails" element={<Protected><Trails /></Protected>} />
           <Route path="/weather" element={<Protected><Weather /></Protected>} />
           <Route path="/progress" element={<Protected><Progress /></Protected>} />
           <Route path="/profile" element={<Protected><Profile /></Protected>} />

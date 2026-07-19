@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { SKATE_TYPES } from '../lib/skateTypes'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Modal } from '../components/ui'
@@ -51,6 +51,15 @@ export default function SkateStart() {
           </button>
         ))}
       </div>
+
+      <Link to="/trails" className="card flex items-center gap-3 hover:border-volt-500/40 transition group">
+        <span className="shrink-0 text-volt-400"><Icon name="travel_explore" size={26} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display font-bold text-white group-hover:text-volt-400 transition">Find trails nearby</div>
+          <div className="text-xs text-slate-400 mt-0.5">Paved paths and rail trails around you, from OpenStreetMap</div>
+        </div>
+        <Icon name="arrow_forward" size={18} className="text-slate-500 shrink-0" />
+      </Link>
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Card>

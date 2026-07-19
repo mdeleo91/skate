@@ -15,6 +15,7 @@ const ALL_LINKS = [
   { to: '/programs', label: 'Guided Programs', icon: 'map', desc: 'Structured plans that build a skater' },
   { to: '/history', label: 'Skate History', icon: 'history', desc: 'Every session, every route' },
   { to: '/routes', label: 'Route Collection', icon: 'route', desc: 'Trails, parks, neighborhood loops' },
+  { to: '/trails', label: 'Find Trails', icon: 'travel_explore', desc: 'Paved paths and rail trails near you' },
   { to: '/stats', label: 'Lifetime Stats', icon: 'sports_score', desc: 'Totals and personal records' },
   { to: '/weight', label: 'Weight Tracking', icon: 'monitor_weight', desc: 'Trend over noise' },
   { to: '/photos', label: 'Progress Photos', icon: 'photo_camera', desc: 'Front, side, back — month by month' },
