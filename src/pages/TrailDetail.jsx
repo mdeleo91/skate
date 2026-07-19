@@ -10,6 +10,7 @@ import { levelColor } from '../lib/track'
 import { useWeather } from '../lib/weather'
 import { getCurrentPosition } from '../lib/geo'
 import { fmtDuration } from '../lib/calc'
+import { SKATE_TYPES } from '../lib/skateTypes'
 
 const COVERED = '#2DD4BF'
 const UNCOVERED = '#64748b'
@@ -23,6 +24,7 @@ export default function TrailDetail() {
   const [amenities, setAmenities] = useState(undefined) // undefined = loading, null = failed
   const [targetMi, setTargetMi] = useState(6)
   const [here, setHere] = useState(null)
+  const [disc, setDisc] = useState('trail')
   const wx = useWeather()
 
   const saved = (data?.trails || []).find((t) => t.id === id)
@@ -122,12 +124,25 @@ export default function TrailDetail() {
         )}
       </div>
 
-      <button
-        onClick={() => nav(`/live?type=trail&name=${encodeURIComponent(trail.name)}&trail=${trail.id}`)}
-        className="btn-primary w-full !py-3.5"
-      >
-        <Icon name="roller_skating" size={19} /> Skate this trail
-      </button>
+      <div className="card !p-3 space-y-2.5">
+        <div className="flex flex-wrap gap-1.5">
+          {SKATE_TYPES.filter((t) => t.gpsBased).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setDisc(t.id)}
+              className={`chip !px-3 !py-1.5 ${disc === t.id ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400'}`}
+            >
+              {t.name.replace(' Training', '')}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => nav(`/live?type=${disc}&name=${encodeURIComponent(trail.name)}&trail=${trail.id}`)}
+          className="btn-primary w-full !py-3.5"
+        >
+          <Icon name="roller_skating" size={19} /> Skate this trail
+        </button>
+      </div>
 
       {/* Your history on this trail */}
       <Card>

@@ -30,30 +30,26 @@ export default function SkateStart() {
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {SKATE_TYPES.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setSelected(t)}
-            className={`card text-left transition border-white/5 ${RING[t.color]} hover:bg-ink-700/60`}
-          >
-            <div className="flex items-start justify-between">
-              <span className={TEXT[t.color]}><Icon name={t.icon} size={28} /></span>
-              <span className={`chip bg-white/5 ${TEXT[t.color]}`}>{t.met} MET</span>
-            </div>
-            <div className="font-display font-bold text-white mt-2">{t.name}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{t.blurb}</div>
-            <div className="flex flex-wrap gap-1 mt-2.5">
-              {t.stats.map((s) => (
-                <span key={s} className="chip bg-ink-700 text-slate-400">{s}</span>
-              ))}
-            </div>
-            {!t.gpsBased && <div className="text-[11px] text-slate-500 mt-2">Time-based · no GPS needed</div>}
-          </button>
-        ))}
-      </div>
-
+      {/* Where: trails first — they're the heart of the GPS experience. */}
       <TrailsSection trails={data.trails || []} workouts={data.workouts} />
+
+      {/* What kind: compact discipline tiles; details live in the modal. */}
+      <div>
+        <SectionTitle>Disciplines</SectionTitle>
+        <div className="grid grid-cols-3 gap-2">
+          {SKATE_TYPES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setSelected(t)}
+              className={`card-tight !p-3 text-center transition border-white/5 ${RING[t.color]} hover:bg-ink-700/60`}
+            >
+              <div className={`${TEXT[t.color]} grid place-items-center`}><Icon name={t.icon} size={26} /></div>
+              <div className="font-display font-bold text-white text-[13px] leading-tight mt-1.5">{t.name}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">{t.met} MET{t.gpsBased ? '' : ' · timed'}</div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Card>
@@ -84,22 +80,13 @@ export default function SkateStart() {
         title={selected ? <><Icon name={selected.icon} size={20} className={`mr-1.5 ${TEXT[selected.color]}`} />{selected.name}</> : ''}
       >
         {selected && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-400">{selected.blurb}</p>
-            <div className="card-tight text-xs text-slate-400 space-y-1">
-              <div className="font-semibold text-slate-200 mb-1">This session tracks</div>
-              {selected.stats.map((s) => <div key={s}>· {s}</div>)}
-            </div>
-            <button
-              className="btn-primary w-full"
-              onClick={() => nav(`/live?type=${selected.id}`)}
-            >
-              Start live session
-            </button>
-            <button className="btn-ghost w-full" onClick={() => { setManualTypeId(selected.id); setSelected(null) }}>
-              Enter manually instead
-            </button>
-          </div>
+          <StartSheet
+            key={selected.id}
+            type={selected}
+            trails={data.trails || []}
+            onManual={() => { setManualTypeId(selected.id); setSelected(null) }}
+            onStart={(trail) => nav(`/live?type=${selected.id}${trail ? `&trail=${trail.id}&name=${encodeURIComponent(trail.name)}` : ''}`)}
+          />
         )}
       </Modal>
 
@@ -110,6 +97,51 @@ export default function SkateStart() {
         onSaved={() => nav('/history')}
       />
       <StrengthModal open={strength} onClose={() => setStrength(false)} />
+    </div>
+  )
+}
+
+// The discipline start sheet: what the session tracks, plus — for GPS
+// disciplines with saved trails — a "where?" picker that pre-names and tags
+// the session with the trail.
+function StartSheet({ type, trails, onStart, onManual }) {
+  const [trailPick, setTrailPick] = useState(null)
+  const showTrails = type.gpsBased && trails.length > 0
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-400">{type.blurb}</p>
+      <div className="card-tight text-xs text-slate-400 space-y-1">
+        <div className="font-semibold text-slate-200 mb-1">This session tracks</div>
+        {type.stats.map((s) => <div key={s}>· {s}</div>)}
+      </div>
+      {showTrails && (
+        <div>
+          <div className="label">Where?</div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setTrailPick(null)}
+              className={`chip !px-3 !py-1.5 ${trailPick == null ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400'}`}
+            >
+              Free skate
+            </button>
+            {trails.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTrailPick(t)}
+                className={`chip !px-3 !py-1.5 max-w-full ${trailPick?.id === t.id ? 'bg-volt-500 text-ink-900' : 'bg-ink-700 text-slate-400'}`}
+              >
+                <span className="truncate max-w-[220px]">{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <button className="btn-primary w-full" onClick={() => onStart(trailPick)}>
+        Start live session{trailPick ? ` on ${trailPick.name.split(' ').slice(0, 2).join(' ')}…` : ''}
+      </button>
+      <button className="btn-ghost w-full" onClick={onManual}>
+        Enter manually instead
+      </button>
     </div>
   )
 }
@@ -142,19 +174,26 @@ function TrailsSection({ trails, workouts }) {
       </SectionTitle>
       <div className="space-y-2">
         {trails.map((t) => (
-          <Link key={t.id} to={`/trail/${t.id}`} className="card !py-3 flex items-center gap-3 hover:border-volt-500/40 transition group">
-            <span className="shrink-0 text-volt-400"><Icon name="route" size={22} /></span>
-            <div className="min-w-0 flex-1">
-              <div className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{t.name}</div>
+          <div key={t.id} className="card !py-3 flex items-center gap-3">
+            <Link to={`/trail/${t.id}`} className="min-w-0 flex-1 group">
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-volt-400"><Icon name="route" size={18} /></span>
+                <span className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{t.name}</span>
+              </div>
               <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
                 <div className="h-full rounded-full bg-volt-500" style={{ width: `${coverage[t.id]}%` }} />
               </div>
               <div className="text-[11px] text-slate-500 mt-1 tabular-nums">
                 {coverage[t.id]}% skated · ~{(t.lengthM / 1609.344).toFixed(1)} mi
               </div>
-            </div>
-            <Icon name="arrow_forward" size={16} className="text-slate-500 shrink-0" />
-          </Link>
+            </Link>
+            <Link
+              to={`/live?type=trail&trail=${t.id}&name=${encodeURIComponent(t.name)}`}
+              className="btn-primary !py-2 !px-4 shrink-0"
+            >
+              <Icon name="play_arrow" size={16} /> Skate
+            </Link>
+          </div>
         ))}
       </div>
     </div>
