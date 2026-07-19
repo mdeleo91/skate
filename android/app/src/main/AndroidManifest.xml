@@ -40,4 +40,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Keeps accelerometer sampling alive while the screen is off mid-skate. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- One-shot position for weather + trail search (@capacitor/geolocation). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>

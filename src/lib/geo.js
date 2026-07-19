@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Geolocation } from '@capacitor/geolocation'
 
 // True when running inside the Android/iOS app shell rather than a browser.
 export const isNativeApp = Capacitor.isNativePlatform()
@@ -8,6 +9,22 @@ export const isNativeApp = Capacitor.isNativePlatform()
 // off — start() when a GPS session begins, read() once per fix, stop() at the
 // end. Null in the browser, where LiveSkate falls back to devicemotion.
 export const Roughness = isNativeApp ? registerPlugin('Roughness') : null
+
+// One-shot position for weather / trail search. The WebView's built-in
+// navigator.geolocation is unreliable inside the APK even with location
+// permission granted; the official Geolocation plugin goes through Play
+// Services natively (and wraps navigator.geolocation on the web).
+export async function getCurrentPosition(opts = {}) {
+  try {
+    return await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, ...opts })
+  } catch (e) {
+    const msg = String(e?.message ?? e)
+    if (/denied|permission/i.test(msg)) {
+      throw new Error('Location permission is needed — allow it in Settings and try again.')
+    }
+    throw new Error(msg || 'Location unavailable')
+  }
+}
 
 // One watcher API for both worlds.
 //

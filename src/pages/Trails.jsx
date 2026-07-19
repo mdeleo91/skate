@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '../components/ui'
 import Icon from '../components/icons'
 import { fetchNearbyTrails } from '../lib/trails'
+import { getCurrentPosition } from '../lib/geo'
 
 const RADII = [
   { label: '5 mi', m: 8000 },
@@ -22,15 +23,9 @@ export default function Trails() {
         .then((trails) => alive && setState({ loading: false, trails, place }))
         .catch((e) => alive && setState({ loading: false, error: e.message }))
     }
-    if (!navigator.geolocation) {
-      setState({ loading: false, error: 'This device has no location access.' })
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => go(pos.coords.latitude, pos.coords.longitude, 'your location'),
-      () => alive && setState({ loading: false, error: 'Location permission is needed to find trails near you.' }),
-      { timeout: 10000 }
-    )
+    getCurrentPosition()
+      .then((pos) => go(pos.coords.latitude, pos.coords.longitude, 'your location'))
+      .catch((e) => alive && setState({ loading: false, error: e.message }))
     return () => { alive = false }
   }, [radius, attempt])
 
