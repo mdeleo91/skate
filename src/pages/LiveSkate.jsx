@@ -40,6 +40,9 @@ export default function LiveSkate() {
   const lastFix = useRef(null)      // { lat, lon, t } of last accepted GPS fix
   const altSmooth = useRef(null)    // EMA-smoothed altitude (m)
   const altBase = useRef(null)      // lowest smoothed altitude since last committed gain
+  const baroAlt = useRef(null)      // barometric altitude (m, uncalibrated)
+  const baroAt = useRef(0)          // when the last pressure reading arrived
+  const baroOffset = useRef(null)   // slow-tracked (GPS − baro) so baro sits on the GPS scale
   const demoRef = useRef({ t: 0 })
   const startedAt = useRef(null)
   const hrSamples = useRef([])
@@ -111,8 +114,15 @@ export default function LiveSkate() {
     // (a one-fix lag), the next fix gets this stretch of pavement.
     if (Roughness) {
       Roughness.read()
-        .then(({ rms, samples }) => {
+        .then(({ rms, samples, pressure, pressureSamples }) => {
           motionSamples.current = samples
+          if (pressureSamples > 0 && pressure > 0) {
+            // Standard atmosphere: pressure → altitude. Absolute value is off
+            // by the day's weather, but deltas are accurate to ~0.3 m — the
+            // GPS-tracked offset below puts it on the right absolute scale.
+            baroAlt.current = 44330 * (1 - Math.pow(pressure / 1013.25, 1 / 5.255))
+            baroAt.current = Date.now()
+          }
           if (samples > 3 && rms >= 0) {
             if (roughRms.current == null) dlog('motion:live', { samples }, { critical: true })
             roughRms.current = +rms.toFixed(2)
@@ -146,6 +156,8 @@ export default function LiveSkate() {
       mph: mps != null ? +mphFromMps(mps).toFixed(1) : undefined,
       r: roughRms.current ?? undefined,
       n: motionSamples.current ?? undefined,
+      // Uncalibrated barometric altitude (m) — for elevation tuning.
+      ba: baroAlt.current != null ? +baroAlt.current.toFixed(1) : undefined,
     })
 
     let mph = null
@@ -174,9 +186,28 @@ export default function LiveSkate() {
     lastFix.current = p
     setPoints((ps) => [...ps, p])
 
-    // Elevation: smooth the noisy GPS altitude, then only bank climbs that
-    // clear a 3 m hysteresis — otherwise ±10 m jitter becomes fake mountains.
-    if (altitude != null) {
+    // Elevation. Preferred source: the barometer (via the native plugin) —
+    // pressure resolves ~0.3 m where GPS altitude wobbles ±10 m, so the
+    // hysteresis gate can drop from 3 m to 1 m and catch bridge-sized
+    // climbs. A slow-tracked offset pins the baro curve to the GPS altitude
+    // scale (and absorbs weather drift). GPS-only path stays as fallback.
+    const baroFresh = baroAlt.current != null && Date.now() - baroAt.current < 20000
+    if (baroFresh) {
+      if (altitude != null) {
+        const target = altitude - baroAlt.current
+        baroOffset.current = baroOffset.current == null ? target : baroOffset.current * 0.98 + target * 0.02
+      }
+      const a0 = baroAlt.current + (baroOffset.current ?? 0)
+      altSmooth.current = altSmooth.current == null ? a0 : altSmooth.current * 0.5 + a0 * 0.5
+      const a = altSmooth.current
+      if (altBase.current == null || a < altBase.current) altBase.current = a
+      else if (a - altBase.current >= 1) {
+        setElevation((e) => e + (a - altBase.current) * 3.28084)
+        altBase.current = a
+      }
+    } else if (altitude != null) {
+      // No barometer: smooth the noisy GPS altitude and only bank climbs
+      // clearing a 3 m gate — otherwise ±10 m jitter becomes fake mountains.
       altSmooth.current = altSmooth.current == null ? altitude : altSmooth.current * 0.7 + altitude * 0.3
       const a = altSmooth.current
       if (altBase.current == null || a < altBase.current) altBase.current = a

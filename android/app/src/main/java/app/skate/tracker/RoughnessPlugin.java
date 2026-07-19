@@ -23,12 +23,15 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class RoughnessPlugin extends Plugin implements SensorEventListener {
     private SensorManager sensors;
     private Sensor sensor;
+    private Sensor pressureSensor; // barometer — fine-grained elevation
     private boolean linear; // TYPE_LINEAR_ACCELERATION (gravity already removed)
     private PowerManager.WakeLock lock;
 
-    // Sum of squared magnitudes + count since the last read; guarded by `this`.
+    // Sums since the last read; guarded by `this`.
     private double sumSq = 0;
     private int count = 0;
+    private double pressureSum = 0; // hPa
+    private int pressureCount = 0;
 
     // Prefer the wake-up variant: Pixels (and others) suspend non-wake-up
     // sensors when the screen turns off even while a partial wake lock holds
@@ -52,15 +55,23 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
             return;
         }
         sensors.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
+        // Barometer, when the device has one: pressure resolves elevation to
+        // ~0.3 m where GPS altitude wobbles by ±10 m. Optional — read() just
+        // reports no pressure on devices without it.
+        pressureSensor = pick(Sensor.TYPE_PRESSURE);
+        if (pressureSensor != null) {
+            sensors.registerListener(this, pressureSensor, SensorManager.SENSOR_DELAY_UI);
+        }
         PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
         lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "skate:roughness");
         // Timed as a leak backstop — released properly when the session ends.
         lock.acquire(6 * 60 * 60 * 1000L);
-        synchronized (this) { sumSq = 0; count = 0; }
+        synchronized (this) { sumSq = 0; count = 0; pressureSum = 0; pressureCount = 0; }
         JSObject ret = new JSObject();
         ret.put("sensor", sensor.getName());
         ret.put("wakeUp", sensor.isWakeUpSensor());
         ret.put("linear", linear);
+        ret.put("barometer", pressureSensor != null ? pressureSensor.getName() : null);
         call.resolve(ret);
     }
 
@@ -70,25 +81,40 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
         call.resolve();
     }
 
-    // RMS (m/s²) of everything sensed since the previous read, then reset.
+    // Everything sensed since the previous read, then reset: vibration RMS
+    // (m/s²) and mean barometric pressure (hPa; -1 when no barometer).
     @PluginMethod
     public void read(PluginCall call) {
         double rms;
         int n;
+        double pressure;
+        int pn;
         synchronized (this) {
             n = count;
             rms = n > 0 ? Math.sqrt(sumSq / n) : -1;
             sumSq = 0;
             count = 0;
+            pn = pressureCount;
+            pressure = pn > 0 ? pressureSum / pn : -1;
+            pressureSum = 0;
+            pressureCount = 0;
         }
         JSObject ret = new JSObject();
         ret.put("rms", rms);
         ret.put("samples", n);
+        ret.put("pressure", pressure);
+        ret.put("pressureSamples", pn);
         call.resolve(ret);
     }
 
     @Override
     public void onSensorChanged(SensorEvent e) {
+        if (e.sensor.getType() == Sensor.TYPE_PRESSURE) {
+            synchronized (this) {
+                if (pressureCount < 200_000) { pressureSum += e.values[0]; pressureCount++; }
+            }
+            return;
+        }
         float x = e.values[0], y = e.values[1], z = e.values[2];
         double mag = Math.sqrt(x * x + y * y + z * z);
         if (!linear) mag = Math.abs(mag - 9.81);
