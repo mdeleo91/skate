@@ -370,85 +370,62 @@ function SearchResults({ q, submitSignal }) {
     })
   }
 
-  // Enter in the search bar above fires the online search from here.
+  // Online search runs by itself: type, pause half a second, results appear.
+  // Enter still forces an immediate search.
+  useEffect(() => {
+    const query = q.trim()
+    if (query.length < 3) return
+    const t = setTimeout(() => {
+      if (online.query !== query || online.status === 'idle') searchOnline()
+    }, 600)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
   useEffect(() => {
     if (submitSignal > 0) searchOnline()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitSignal])
 
+  // One list, best-first: your library, then whole dishes (the "I made pasta"
+  // answer), then packaged foods, then cocktails. Source shown as a tag.
+  const combined = [
+    ...results.map((f) => ({ ...f, src: 'library' })),
+    ...online.dishes.map((f) => ({ ...f, src: 'dish' })),
+    ...online.items.slice(0, 10).map((f) => ({ ...f, src: 'packaged' })),
+    ...online.cocktails.map((f) => ({ ...f, src: 'cocktail' })),
+  ]
+  const stillTyping = q.trim().length >= 3 && online.query !== q.trim() && online.status !== 'loading'
+
   return (
     <div className="space-y-4">
       <Card>
-        <SectionTitle>{results.length} in library</SectionTitle>
-        <FoodList foods={results} onPick={setPick} />
+        <SectionTitle
+          action={
+            online.status === 'loading' || stillTyping
+              ? <span className="text-xs text-volt-400">searching…</span>
+              : online.status === 'done'
+                ? <span className="text-xs text-slate-500">library + USDA + more</span>
+                : null
+          }
+        >
+          Results
+        </SectionTitle>
+        {combined.length > 0
+          ? <FoodList foods={combined} onPick={(f) => (f.cat === 'Dish' ? setDishPick(f) : setPick(f))} />
+          : online.status === 'loading' || stillTyping
+            ? <div className="text-sm text-slate-400 py-2">Searching everywhere for “{q.trim()}”…</div>
+            : <div className="text-sm text-slate-500 py-1">Nothing yet — keep typing, or add it by hand below.</div>}
+        {online.status === 'error' && (
+          <div className="text-sm text-slate-400 mt-2">
+            Couldn't reach the online databases — you might be offline.
+            <button onClick={searchOnline} className="btn-ghost w-full mt-2 !py-1.5 text-xs">Try again</button>
+          </div>
+        )}
+        <p className="text-[11px] text-slate-500 mt-3">
+          <span className="text-volt-400 font-semibold">Dish</span> = a complete meal (USDA) — log it
+          by the cup or plate, no ingredient math.
+        </p>
       </Card>
-
-      {q.trim().length >= 2 && (
-        <Card>
-          <SectionTitle action={online.status === 'done' ? <span className="text-xs text-slate-500">via Open Food Facts</span> : null}>
-            Online Search
-          </SectionTitle>
-          {online.status === 'idle' && (
-            <div>
-              <p className="text-sm text-slate-400 mb-3">
-                Not in the library? Search Open Food Facts — a free database of over 3 million foods.
-              </p>
-              <button onClick={searchOnline} className="btn-ghost w-full">
-                <Icon name="travel_explore" size={17} /> Search online for “{q.trim()}”
-              </button>
-            </div>
-          )}
-          {online.status === 'loading' && <div className="text-sm text-slate-400 py-2">Searching Open Food Facts…</div>}
-          {online.status === 'error' && (
-            <div className="text-sm text-slate-400">
-              Couldn't reach the food database — you might be offline.
-              <div className="flex gap-2 mt-3">
-                <button onClick={searchOnline} className="btn-ghost flex-1 !py-1.5 text-xs">Try again</button>
-                <button onClick={() => setQuickAdd(true)} className="btn-ghost flex-1 !py-1.5 text-xs">Enter it by hand</button>
-              </div>
-            </div>
-          )}
-          {online.status === 'done' && (
-            online.items.length
-              ? (
-                <>
-                  <p className="text-xs text-slate-500 mb-2">Values are per 100 g — adjust servings when you log.</p>
-                  <FoodList foods={online.items} onPick={setPick} />
-                  {online.query !== q.trim() && (
-                    <button onClick={searchOnline} className="btn-ghost w-full mt-3 !py-1.5 text-xs">
-                      Search online for “{q.trim()}” instead
-                    </button>
-                  )}
-                </>
-              )
-              : <div className="text-sm text-slate-500">No packaged-food matches for “{online.query}”.</div>
-          )}
-        </Card>
-      )}
-
-      {online.status === 'done' && online.dishes.length > 0 && (
-        <Card>
-          <SectionTitle action={<span className="text-xs text-slate-500">via USDA</span>}>
-            <Icon name="lunch_dining" size={15} className="mr-1.5 text-volt-400" />Whole Dishes
-          </SectionTitle>
-          <p className="text-xs text-slate-500 mb-2">
-            Complete meals as eaten — pick one and log it by the cup or plate, no ingredient math.
-          </p>
-          <FoodList foods={online.dishes} onPick={setDishPick} />
-        </Card>
-      )}
-
-      {online.status === 'done' && online.cocktails.length > 0 && (
-        <Card>
-          <SectionTitle action={<span className="text-xs text-slate-500">via TheCocktailDB</span>}>
-            <Icon name="local_bar" size={15} className="mr-1.5 text-surge-400" />Cocktails
-          </SectionTitle>
-          <p className="text-xs text-slate-500 mb-2">
-            Calories estimated from each recipe's actual ingredients — a heavy pour runs higher.
-          </p>
-          <FoodList foods={online.cocktails} onPick={setPick} />
-        </Card>
-      )}
 
       <Card>
         <SectionTitle>Can't find it?</SectionTitle>
@@ -605,6 +582,14 @@ function QuickAddForm({ initialName, addMeal, onClose }) {
   )
 }
 
+// Optional f.src renders a small origin tag — 'dish' is the one worth
+// noticing (whole meals, portion-based logging), so it gets the accent.
+const SRC_TAG = {
+  dish: ['Dish', 'bg-volt-500/15 text-volt-400'],
+  packaged: ['Packaged', 'bg-white/5 text-slate-500'],
+  cocktail: ['Cocktail', 'bg-surge-500/15 text-surge-400'],
+}
+
 function FoodList({ foods, onPick }) {
   if (!foods.length) return <div className="text-sm text-slate-500">No matches.</div>
   return (
@@ -612,7 +597,12 @@ function FoodList({ foods, onPick }) {
       {foods.map((f) => (
         <button key={f.id} onClick={() => onPick(f)} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-white/[0.03] rounded-lg px-1 -mx-1">
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-slate-100 truncate">{f.name}</div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-slate-100 truncate">{f.name}</span>
+              {SRC_TAG[f.src] && (
+                <span className={`chip !px-1.5 !py-0 text-[10px] shrink-0 ${SRC_TAG[f.src][1]}`}>{SRC_TAG[f.src][0]}</span>
+              )}
+            </div>
             <div className="text-xs text-slate-500">{f.brand} · {f.serving}</div>
           </div>
           <div className="text-right shrink-0">
