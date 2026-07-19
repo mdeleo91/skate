@@ -5,36 +5,45 @@ import { distanceMeters } from './calc'
 // cycleways and multi-use paths near a point; OSM maps long trails as many
 // short way-segments sharing one name, so grouping by name reassembles
 // "Pinellas Trail" from its hundred pieces.
+// Overpass mirrors, fastest-first. The main instance is community-run and
+// often overloaded, so every request gets a hard client-side abort and falls
+// through to the next mirror instead of hanging the page.
 const ENDPOINTS = [
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ]
+const FETCH_TIMEOUT_MS = 30000
 
 export async function fetchNearbyTrails(lat, lon, radiusMeters = 16000) {
   const around = `(around:${Math.round(radiusMeters)},${lat},${lon})`
-  const q = `[out:json][timeout:25];
+  const q = `[out:json][timeout:20];
 (
   way["highway"="cycleway"]["name"]${around};
   way["highway"~"^(path|footway|track)$"]["name"]["surface"~"^(paved|asphalt|concrete)$"]${around};
 );
-out tags geom 800;`
+out tags geom 600;`
 
   let lastErr
   for (const url of ENDPOINTS) {
+    const abort = new AbortController()
+    const timer = setTimeout(() => abort.abort(), FETCH_TIMEOUT_MS)
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(q),
-      })
-      if (!res.ok) throw new Error(`Trail service unavailable (${res.status})`)
+      const res = await fetch(`${url}?data=${encodeURIComponent(q)}`, { signal: abort.signal })
+      if (!res.ok) throw new Error(`status ${res.status}`)
       const j = await res.json()
       return groupTrails(j.elements || [], lat, lon)
     } catch (e) {
       lastErr = e
+    } finally {
+      clearTimeout(timer)
     }
   }
-  throw lastErr
+  const msg = String(lastErr?.message ?? lastErr)
+  if (/429|too many|rate/i.test(msg)) {
+    throw new Error('The trail service is busy right now — wait a minute and try again.')
+  }
+  throw new Error('Couldn\'t reach the trail service — check your connection and try again.')
 }
 
 function groupTrails(elements, lat, lon) {
