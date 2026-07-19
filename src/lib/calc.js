@@ -86,8 +86,13 @@ export function fmtPace(minutes, miles) {
   return `${m}:${String(s).padStart(2, '0')} /mi`
 }
 
-export const todayISO = () => new Date().toISOString().slice(0, 10)
-export const isoDay = (d) => new Date(d).toISOString().slice(0, 10)
+// Local-time date stamps. toISOString() is UTC — in US timezones that flips
+// "today" to tomorrow during the evening (8 PM Eastern), which zeroed the
+// day's totals while the user was still eating dinner.
+const localISO = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+export const todayISO = () => localISO(new Date())
+export const isoDay = (d) => localISO(new Date(d))
 
 export function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000)

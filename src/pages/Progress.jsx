@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Card, SectionTitle, Stat, Bar, Sparkline, EmptyState } from '../components/ui'
 import { ACHIEVEMENTS } from '../lib/achievements'
+import { isoDay } from '../lib/calc'
 import Icon from '../components/icons'
 
 export default function Progress() {
@@ -139,8 +140,8 @@ function last8Weeks(workouts) {
     end.setDate(end.getDate() - i * 7)
     const start = new Date(end)
     start.setDate(start.getDate() - 6)
-    const s = start.toISOString().slice(0, 10)
-    const e = end.toISOString().slice(0, 10)
+    const s = isoDay(start)
+    const e = isoDay(end)
     const miles = workouts.filter((w) => w.date >= s && w.date <= e && w.kind === 'skate').reduce((a, w) => a + (w.miles || 0), 0)
     out.push({ label: i === 0 ? 'Now' : `-${i}w`, miles })
   }
