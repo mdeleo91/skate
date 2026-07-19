@@ -176,7 +176,10 @@ function ConditionsBanner() {
           <span className={`shrink-0 ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}><Icon name={s.icon} size={30} /></span>
           <div className="min-w-0 flex-1">
             <div className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{s.verdict}</div>
-            <div className="text-xs text-slate-400 truncate">{wx.w.temp}°F • {wx.w.wind} mph wind • {wx.w.rain}% rain</div>
+            <div className="text-xs text-slate-400 truncate">
+              {wx.w.temp}°F • {wx.w.wind} mph wind • {wx.w.rain}% rain
+              {wx.place && wx.place !== 'Your location' ? ` • ${wx.place}` : ''}
+            </div>
           </div>
           <div className="text-right shrink-0">
             <div className={`font-display text-2xl font-bold tabular-nums ${s.score >= 60 ? 'text-volt-400' : 'text-ember-400'}`}>{s.score}</div>

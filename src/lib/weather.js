@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getCurrentPosition } from './geo'
+import { getCurrentPosition, reverseCity } from './geo'
 
 // open-meteo.com — free, no API key required.
 const API = 'https://api.open-meteo.com/v1/forecast'
@@ -38,9 +38,12 @@ export const CODE = {
 
 async function fetchWeather() {
   const coords = await getCurrentPosition({ timeout: 8000 })
-    .then((pos) => ({ lat: pos.coords.latitude, lon: pos.coords.longitude, place: 'Your location' }))
+    .then((pos) => ({ lat: pos.coords.latitude, lon: pos.coords.longitude }))
     .catch(() => null)
-  const { lat, lon, place } = coords || { lat: 39.7392, lon: -104.9903, place: 'Denver, CO (location unavailable)' }
+  const { lat, lon } = coords || { lat: 39.7392, lon: -104.9903 }
+  const place = coords
+    ? (await reverseCity(lat, lon)) || 'Your location'
+    : 'Denver, CO (location unavailable)'
   const url = `${API}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,wind_speed_10m&daily=uv_index_max,sunrise,sunset,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`
   const res = await fetch(url)
   if (!res.ok) throw new Error('Weather service unavailable')

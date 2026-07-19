@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '../components/ui'
 import Icon from '../components/icons'
 import { fetchNearbyTrails } from '../lib/trails'
-import { getCurrentPosition } from '../lib/geo'
+import { getCurrentPosition, reverseCity } from '../lib/geo'
 
 const RADII = [
   { label: '5 mi', m: 8000 },
@@ -14,6 +14,7 @@ export default function Trails() {
   const [radius, setRadius] = useState(RADII[1].m)
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState({ loading: true })
+  const [place, setPlace] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -24,7 +25,10 @@ export default function Trails() {
         .catch((e) => alive && setState({ loading: false, error: e.message }))
     }
     getCurrentPosition()
-      .then((pos) => go(pos.coords.latitude, pos.coords.longitude, 'your location'))
+      .then((pos) => {
+        go(pos.coords.latitude, pos.coords.longitude, 'your location')
+        reverseCity(pos.coords.latitude, pos.coords.longitude).then((c) => alive && c && setPlace(c))
+      })
       .catch((e) => alive && setState({ loading: false, error: e.message }))
     return () => { alive = false }
   }, [radius, attempt])
@@ -34,7 +38,8 @@ export default function Trails() {
       <div>
         <h1 className="h-title">Find Trails</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Named, paved paths and cycleways near you — rail trails, greenways, park loops. Data from OpenStreetMap.
+          Named, paved paths and cycleways near {place || 'you'} — rail trails, greenways, park loops.
+          Data from OpenStreetMap.
         </p>
       </div>
 

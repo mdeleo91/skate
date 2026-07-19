@@ -14,6 +14,23 @@ export const Roughness = isNativeApp ? registerPlugin('Roughness') : null
 // navigator.geolocation is unreliable inside the APK even with location
 // permission granted; the official Geolocation plugin goes through Play
 // Services natively (and wraps navigator.geolocation on the web).
+// Coordinates → "St. Petersburg, FL" so the app can show which city its
+// weather and trail lookups are actually using. Free, keyless, client-side.
+export async function reverseCity(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+    )
+    if (!res.ok) return null
+    const j = await res.json()
+    const city = j.city || j.locality
+    const state = (j.principalSubdivisionCode || '').split('-')[1]
+    return city ? (state ? `${city}, ${state}` : city) : null
+  } catch {
+    return null
+  }
+}
+
 export async function getCurrentPosition(opts = {}) {
   try {
     return await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, ...opts })
