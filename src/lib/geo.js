@@ -31,10 +31,34 @@ export async function reverseCity(lat, lon) {
   }
 }
 
+// Remember the last position we ever saw (from any source) so indoor
+// lookups degrade to "where you were recently" instead of a Denver default.
+const LAST_POS_KEY = 'skate.lastPos'
+export function rememberPosition(lat, lon) {
+  try { localStorage.setItem(LAST_POS_KEY, JSON.stringify({ lat, lon, at: Date.now() })) } catch { /* full */ }
+}
+function lastKnownPosition(maxAgeMs = 24 * 3600 * 1000) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_POS_KEY))
+    if (saved && Date.now() - saved.at < maxAgeMs) {
+      return { coords: { latitude: saved.lat, longitude: saved.lon }, stale: true }
+    }
+  } catch { /* corrupt */ }
+  return null
+}
+
 export async function getCurrentPosition(opts = {}) {
   try {
-    return await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, ...opts })
+    // maximumAge: a cached ~10-minute-old position is perfect for weather and
+    // trail search, and returns instantly indoors where a fresh fix times out.
+    const pos = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: false, timeout: 15000, maximumAge: 10 * 60 * 1000, ...opts,
+    })
+    rememberPosition(pos.coords.latitude, pos.coords.longitude)
+    return pos
   } catch (e) {
+    const fallback = lastKnownPosition()
+    if (fallback) return fallback
     const msg = String(e?.message ?? e)
     if (/denied|permission/i.test(msg)) {
       throw new Error('Location permission is needed — allow it in Settings and try again.')
@@ -54,6 +78,17 @@ export async function getCurrentPosition(opts = {}) {
 //
 // Both paths call onFix with the browser Position shape.
 export async function startLocationWatch(onFix, onError) {
+  // Every skate keeps the last-known position fresh for weather/trail lookups.
+  let lastRemembered = 0
+  const onFixRaw = onFix
+  onFix = (pos) => {
+    const now = Date.now()
+    if (now - lastRemembered > 60000) {
+      lastRemembered = now
+      rememberPosition(pos.coords.latitude, pos.coords.longitude)
+    }
+    onFixRaw(pos)
+  }
   if (isNativeApp) {
     const BackgroundGeolocation = registerPlugin('BackgroundGeolocation')
     const id = await BackgroundGeolocation.addWatcher(
