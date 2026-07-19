@@ -6,7 +6,6 @@ import Icon from './icons'
 const PRIMARY = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/skate', label: 'Skate', icon: 'roller_skating' },
-  { to: '/history', label: 'Workouts', icon: 'fitness_center' },
   { to: '/nutrition', label: 'Nutrition', icon: 'nutrition' },
   { to: '/progress', label: 'Progress', icon: 'monitoring' },
 ]
@@ -112,7 +111,7 @@ export default function Layout({ children }) {
       <main className="mx-auto max-w-5xl px-4 py-5">{children}</main>
 
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl pb-[var(--sab)]">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-4">
           {PRIMARY.map((l) => {
             const active = l.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(l.to)
             return (

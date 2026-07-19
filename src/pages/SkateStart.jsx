@@ -23,11 +23,16 @@ export default function SkateStart() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="h-title">Start a Skate</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Every discipline burns differently and tracks differently. Pick what you're actually doing today.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="h-title">Start a Skate</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Every discipline burns differently and tracks differently. Pick what you're actually doing today.
+          </p>
+        </div>
+        <Link to="/history" className="btn-ghost !py-2 !px-3 text-sm shrink-0">
+          <Icon name="history" size={16} /> History
+        </Link>
       </div>
 
       {/* Where: trails first — they're the heart of the GPS experience. */}
