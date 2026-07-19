@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
 import { ROUGH_RMS, cleanRoughness } from '../lib/track'
+import { matchRouteToTrails } from '../lib/trailMatch'
 import { isNativeApp, startLocationWatch, Roughness } from '../lib/geo'
 import { dlog } from '../lib/debugLog'
 import { RouteMap, Modal } from '../components/ui'
@@ -18,6 +19,8 @@ export default function LiveSkate() {
   const data = useData()
   const typeId = params.get('type') || 'outdoor-fitness'
   const type = getSkateType(typeId)
+  const presetTrailId = params.get('trail')
+  const presetName = params.get('name')
 
   const [status, setStatus] = useState('idle') // idle | running | paused | done
   const [mode, setMode] = useState(null)       // 'gps' | 'demo'
@@ -31,7 +34,7 @@ export default function LiveSkate() {
   const [points, setPoints] = useState([])
   const [laps, setLaps] = useState([])
   const [saveOpen, setSaveOpen] = useState(false)
-  const [name, setName] = useState('')
+  const [name, setName] = useState(presetName || '')
   const [, setNowTick] = useState(0) // 1 Hz re-render while running
 
   const watcher = useRef(null)      // { stop } from startLocationWatch
@@ -396,11 +399,21 @@ export default function LiveSkate() {
     dlog('session:finish', {
       miles: +miles.toFixed(2), durationSec: finalElapsed, points: points.length, coveragePct,
     }, { critical: true })
+    // Which trail was this? Preset from "Skate this trail", else match the
+    // route against saved trails — and let the trail name the session when
+    // the user didn't.
+    let trailId = presetTrailId || undefined
+    let autoName = null
+    if (!trailId && mode === 'gps') {
+      const matched = matchRouteToTrails(points, data.trails)
+      if (matched) { trailId = matched.id; autoName = matched.name }
+    }
     const id = data.addWorkout({
       date: todayISO(),
       kind: 'skate',
       typeId,
-      name: name || type.name,
+      trailId,
+      name: name || autoName || type.name,
       minutes: Math.max(1, Math.round(finalElapsed / 60)),
       durationSec: finalElapsed,
       movingSec,

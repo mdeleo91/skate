@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { SKATE_TYPES } from '../lib/skateTypes'
 import { useData } from '../context/DataContext'
@@ -6,6 +6,7 @@ import { Card, SectionTitle, Modal } from '../components/ui'
 import Icon from '../components/icons'
 import LogSkateModal from '../components/LogSkateModal'
 import RecentActivity from '../components/RecentActivity'
+import { trailCoverage } from '../lib/trailMatch'
 import { todayISO } from '../lib/calc'
 
 const RING = { volt: 'hover:border-volt-500/50', surge: 'hover:border-surge-500/50', ember: 'hover:border-ember-500/50' }
@@ -52,14 +53,7 @@ export default function SkateStart() {
         ))}
       </div>
 
-      <Link to="/trails" className="card flex items-center gap-3 hover:border-volt-500/40 transition group">
-        <span className="shrink-0 text-volt-400"><Icon name="travel_explore" size={26} /></span>
-        <div className="min-w-0 flex-1">
-          <div className="font-display font-bold text-white group-hover:text-volt-400 transition">Find trails nearby</div>
-          <div className="text-xs text-slate-400 mt-0.5">Paved paths and rail trails around you, from OpenStreetMap</div>
-        </div>
-        <Icon name="arrow_forward" size={18} className="text-slate-500 shrink-0" />
-      </Link>
+      <TrailsSection trails={data.trails || []} workouts={data.workouts} />
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Card>
@@ -116,6 +110,53 @@ export default function SkateStart() {
         onSaved={() => nav('/history')}
       />
       <StrengthModal open={strength} onClose={() => setStrength(false)} />
+    </div>
+  )
+}
+
+// The trail hub on the Skate tab: saved trails with live completion bars, or
+// the discovery banner until the first one is saved.
+function TrailsSection({ trails, workouts }) {
+  const coverage = useMemo(
+    () => Object.fromEntries(trails.map((t) => [t.id, trailCoverage(t, workouts).pct])),
+    [trails, workouts]
+  )
+
+  if (trails.length === 0) {
+    return (
+      <Link to="/trails" className="card flex items-center gap-3 hover:border-volt-500/40 transition group">
+        <span className="shrink-0 text-volt-400"><Icon name="travel_explore" size={26} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display font-bold text-white group-hover:text-volt-400 transition">Find trails nearby</div>
+          <div className="text-xs text-slate-400 mt-0.5">Paved paths and rail trails around you, from OpenStreetMap</div>
+        </div>
+        <Icon name="arrow_forward" size={18} className="text-slate-500 shrink-0" />
+      </Link>
+    )
+  }
+
+  return (
+    <div>
+      <SectionTitle action={<Link to="/trails" className="text-xs text-volt-400 font-semibold">Find more</Link>}>
+        Your Trails
+      </SectionTitle>
+      <div className="space-y-2">
+        {trails.map((t) => (
+          <Link key={t.id} to={`/trail/${t.id}`} className="card !py-3 flex items-center gap-3 hover:border-volt-500/40 transition group">
+            <span className="shrink-0 text-volt-400"><Icon name="route" size={22} /></span>
+            <div className="min-w-0 flex-1">
+              <div className="font-display font-bold text-white truncate group-hover:text-volt-400 transition">{t.name}</div>
+              <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full bg-volt-500" style={{ width: `${coverage[t.id]}%` }} />
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 tabular-nums">
+                {coverage[t.id]}% skated · ~{(t.lengthM / 1609.344).toFixed(1)} mi
+              </div>
+            </div>
+            <Icon name="arrow_forward" size={16} className="text-slate-500 shrink-0" />
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }

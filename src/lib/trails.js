@@ -1,4 +1,10 @@
 import { distanceMeters } from './calc'
+import { slugify } from './trailMatch'
+
+// Last search results, so the detail page can show a trail that isn't saved
+// yet without refetching. Session-lifetime only.
+let lastSearch = []
+export const getCachedTrail = (id) => lastSearch.find((t) => t.id === id) || null
 
 // Trail discovery via the Overpass API (OpenStreetMap's query engine).
 // Free, no key, same dataset our map tiles draw. We ask for named, paved
@@ -70,8 +76,50 @@ function groupTrails(elements, lat, lon) {
     }
     g.segments.push(seg)
   }
-  return Object.values(groups)
+  const out = Object.values(groups)
     .filter((g) => g.lengthM > 400) // drop 100 m stubs that share a street name
     .sort((a, b) => a.minDistM - b.minDistM)
     .slice(0, 30)
+    .map((g) => ({ ...g, id: slugify(g.name) }))
+  lastSearch = out
+  return out
+}
+
+// Amenities within ~250 m of the trail line: parking, restrooms, water.
+// Overpass accepts a polyline for `around` — sample the geometry to keep the
+// query URL sane.
+export async function fetchTrailAmenities(trail) {
+  const pts = trail.segments.flat()
+  const step = Math.max(1, Math.floor(pts.length / 60))
+  const line = pts.filter((_, i) => i % step === 0)
+    .map((p) => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(',')
+  const q = `[out:json][timeout:15];
+(
+  nwr["amenity"="parking"](around:250,${line});
+  nwr["amenity"="drinking_water"](around:250,${line});
+  nwr["amenity"="toilets"](around:250,${line});
+);
+out tags center 200;`
+  for (const url of ENDPOINTS) {
+    const abort = new AbortController()
+    const timer = setTimeout(() => abort.abort(), FETCH_TIMEOUT_MS)
+    try {
+      const res = await fetch(`${url}?data=${encodeURIComponent(q)}`, { signal: abort.signal })
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const j = await res.json()
+      const counts = { parking: 0, water: 0, toilets: 0 }
+      const nearest = {}
+      for (const el of j.elements || []) {
+        const kind = el.tags?.amenity === 'parking' ? 'parking' : el.tags?.amenity === 'drinking_water' ? 'water' : 'toilets'
+        counts[kind]++
+        const lat = el.lat ?? el.center?.lat
+        const lon = el.lon ?? el.center?.lon
+        if (lat != null && !nearest[kind]) nearest[kind] = { lat, lon }
+      }
+      return { counts, nearest }
+    } catch { /* try next mirror */ } finally {
+      clearTimeout(timer)
+    }
+  }
+  return null // amenities are a bonus — the page works without them
 }

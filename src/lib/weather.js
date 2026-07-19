@@ -44,7 +44,7 @@ async function fetchWeather() {
   const place = coords
     ? (await reverseCity(lat, lon)) || 'Your location'
     : 'Denver, CO (location unavailable)'
-  const url = `${API}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,wind_speed_10m&daily=uv_index_max,sunrise,sunset,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`
+  const url = `${API}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m&daily=uv_index_max,sunrise,sunset,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`
   const res = await fetch(url)
   if (!res.ok) throw new Error('Weather service unavailable')
   const j = await res.json()
@@ -55,6 +55,7 @@ async function fetchWeather() {
       humidity: j.current.relative_humidity_2m,
       rain: j.current.precipitation_probability ?? j.daily.precipitation_probability_max[0] ?? 0,
       wind: Math.round(j.current.wind_speed_10m),
+      windDir: j.current.wind_direction_10m ?? null,
       code: j.current.weather_code,
       uv: Math.round(j.daily.uv_index_max[0]),
       sunrise: j.daily.sunrise[0].slice(11, 16),

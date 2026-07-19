@@ -32,6 +32,7 @@ function emptyState(email) {
     favorites: [],   // food ids
     gear: [],        // { id, cat, name, purchased, lifeMiles, maintenance: [] }
     favoriteRoutes: [], // { id, name, cat }
+    trails: [],      // saved OSM trails: { id, name, surface, lengthM, nearest, segments, savedAt }
     program: { activeId: null, startedAt: null, completed: [], doneDays: [] },
     challenges: { joined: [] },
     unlocked: [],
@@ -240,6 +241,13 @@ export function DataProvider({ children }) {
       ...s,
       gear: s.gear.map((g) => (g.id === id ? { ...g, startMiles: 0, purchased: todayISO() } : g)),
     })),
+
+    saveTrail: (trail) => update((s) => {
+      const trails = s.trails || []
+      if (trails.some((t) => t.id === trail.id)) return s
+      return { ...s, trails: [{ ...trail, savedAt: todayISO() }, ...trails] }
+    }),
+    removeTrail: (id) => update((s) => ({ ...s, trails: (s.trails || []).filter((t) => t.id !== id) })),
 
     toggleFavoriteRoute: (name, cat) => update((s) => {
       const exists = s.favoriteRoutes.find((r) => r.name === name)

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { PROGRAMS } from '../lib/programs'
 import { Card, SectionTitle, Bar, Modal } from '../components/ui'
@@ -21,6 +22,16 @@ export default function Programs() {
       </div>
 
       {active && <ActivePlan program={active} />}
+
+      {(data.trails || []).length > 0 && (
+        <Link to={`/trail/${data.trails[0].id}`} className="card !py-3 flex items-center gap-3 hover:border-volt-500/40 transition group">
+          <span className="shrink-0 text-volt-400"><Icon name="route" size={22} /></span>
+          <div className="min-w-0 flex-1 text-sm text-slate-300">
+            For the long-skate days: <span className="font-semibold text-white group-hover:text-volt-400 transition">{data.trails[0].name}</span> is your saved home trail.
+          </div>
+          <Icon name="arrow_forward" size={16} className="text-slate-500 shrink-0" />
+        </Link>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-3">
         {PROGRAMS.map((p) => {

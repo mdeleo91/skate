@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card } from '../components/ui'
 import Icon from '../components/icons'
+import { useData } from '../context/DataContext'
 import { fetchNearbyTrails } from '../lib/trails'
 import { getCurrentPosition, reverseCity } from '../lib/geo'
+import { downsampleSegments } from '../lib/trailMatch'
 
 const RADII = [
   { label: '5 mi', m: 8000 },
@@ -11,6 +14,7 @@ const RADII = [
 ]
 
 export default function Trails() {
+  const data = useData()
   const [radius, setRadius] = useState(RADII[1].m)
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState({ loading: true })
@@ -55,6 +59,13 @@ export default function Trails() {
         ))}
       </div>
 
+      {(data?.trails || []).length > 0 && (
+        <div className="space-y-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Saved Trails</div>
+          {data.trails.map((t) => <TrailCard key={t.id} trail={t} savedView />)}
+        </div>
+      )}
+
       {state.loading && (
         <div className="card text-center py-12 text-sm text-slate-400">Scanning the map for skateable pavement…</div>
       )}
@@ -77,7 +88,10 @@ export default function Trails() {
 
       {state.trails && state.trails.length > 0 && (
         <div className="space-y-3">
-          {state.trails.map((t) => <TrailCard key={t.name} trail={t} />)}
+          {(data?.trails || []).length > 0 && (
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Nearby</div>
+          )}
+          {state.trails.filter((t) => !(data?.trails || []).some((s) => s.id === t.id)).map((t) => <TrailCard key={t.id} trail={t} />)}
           <p className="text-xs text-slate-500 text-center">
             Lengths are the mapped extent within your search radius — long trails continue beyond it.
           </p>
@@ -87,26 +101,40 @@ export default function Trails() {
   )
 }
 
-function TrailCard({ trail }) {
-  const awayMi = trail.minDistM / 1609.344
+function TrailCard({ trail, savedView = false }) {
+  const data = useData()
+  const saved = (data?.trails || []).some((t) => t.id === trail.id)
+  const awayMi = trail.minDistM != null ? trail.minDistM / 1609.344 : null
   const lengthMi = trail.lengthM / 1609.344
-  const maps = `https://www.google.com/maps/dir/?api=1&destination=${trail.nearest.lat.toFixed(6)},${trail.nearest.lon.toFixed(6)}`
   return (
     <Card className="flex items-center gap-4">
-      <TrailPreview segments={trail.segments} />
+      <Link to={`/trail/${trail.id}`} className="shrink-0"><TrailPreview segments={trail.segments} /></Link>
       <div className="min-w-0 flex-1">
-        <div className="font-display font-bold text-white truncate">{trail.name}</div>
-        <div className="text-xs text-slate-400 mt-0.5 tabular-nums">
-          {awayMi < 0.2 ? 'right here' : `${awayMi.toFixed(1)} mi away`} · ~{lengthMi.toFixed(1)} mi mapped
-          {trail.surface ? ` · ${trail.surface}` : ''}
+        <Link to={`/trail/${trail.id}`} className="block">
+          <div className="font-display font-bold text-white truncate">{trail.name}</div>
+          <div className="text-xs text-slate-400 mt-0.5 tabular-nums">
+            {awayMi != null && !savedView ? (awayMi < 0.2 ? 'right here' : `${awayMi.toFixed(1)} mi away`) + ' · ' : ''}
+            ~{lengthMi.toFixed(1)} mi mapped{trail.surface ? ` · ${trail.surface}` : ''}
+          </div>
+        </Link>
+        <div className="flex items-center gap-2 mt-2">
+          <Link to={`/trail/${trail.id}`} className="btn-ghost !py-1 !px-2.5 text-xs">View trail</Link>
+          <button
+            onClick={() => (saved
+              ? data.removeTrail(trail.id)
+              : data.saveTrail({ ...trail, segments: downsampleSegments(trail.segments) }))}
+            className="btn-ghost !py-1 !px-2.5 text-xs"
+          >
+            <Icon name={saved ? 'star_filled' : 'star'} size={13} className={saved ? 'text-volt-400' : ''} />
+            {saved ? 'Saved' : 'Save'}
+          </button>
         </div>
-        <a href={maps} target="_blank" rel="noreferrer" className="btn-ghost !py-1 !px-2.5 text-xs mt-2 inline-flex">
-          <Icon name="my_location" size={13} /> Directions
-        </a>
       </div>
     </Card>
   )
 }
+
+export { TrailCard }
 
 // Tiny shape preview — every mapped segment of the trail, scaled into a box.
 function TrailPreview({ segments }) {
