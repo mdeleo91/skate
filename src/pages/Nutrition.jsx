@@ -5,7 +5,7 @@ import { Card, SectionTitle, Bar, Modal, CalorieRing } from '../components/ui'
 import Icon from '../components/icons'
 import { FOODS, MEAL_SLOTS } from '../lib/foods'
 import { DRINKS } from '../lib/drinks'
-import { searchOpenFoodFacts } from '../lib/foodSearch'
+import { searchOpenFoodFacts, searchUsdaDishes, fetchUsdaPortions } from '../lib/foodSearch'
 import { searchCocktails } from '../lib/cocktailSearch'
 import BarcodeScanner from '../components/BarcodeScanner'
 import WeighInModal from '../components/WeighInModal'
@@ -337,8 +337,9 @@ function EditMealForm({ meal, onClose }) {
 
 function SearchResults({ q, submitSignal }) {
   const [pick, setPick] = useState(null)
+  const [dishPick, setDishPick] = useState(null)
   const [quickAdd, setQuickAdd] = useState(false)
-  const [online, setOnline] = useState({ status: 'idle', query: '', items: [], cocktails: [] })
+  const [online, setOnline] = useState({ status: 'idle', query: '', items: [], cocktails: [], dishes: [] })
   const needle = q.trim().toLowerCase()
   const results = useMemo(
     () => [...FOODS, ...DRINKS].filter((f) => (f.name + f.brand + f.cat).toLowerCase().includes(needle)),
@@ -348,20 +349,22 @@ function SearchResults({ q, submitSignal }) {
   async function searchOnline() {
     const query = q.trim()
     if (query.length < 2) return
-    setOnline({ status: 'loading', query, items: [], cocktails: [] })
-    // Two sources in parallel: packaged foods (Open Food Facts) and cocktail
-    // recipes (TheCocktailDB, calories estimated from the ingredients).
-    const [foods, cocktails] = await Promise.allSettled([
+    setOnline({ status: 'loading', query, items: [], cocktails: [], dishes: [] })
+    // Three sources in parallel: whole dishes (USDA), packaged foods (Open
+    // Food Facts) and cocktail recipes (TheCocktailDB).
+    const [dishes, foods, cocktails] = await Promise.allSettled([
+      searchUsdaDishes(query),
       searchOpenFoodFacts(query),
       searchCocktails(query),
     ])
-    if (foods.status === 'rejected' && cocktails.status === 'rejected') {
-      setOnline({ status: 'error', query, items: [], cocktails: [] })
+    if (dishes.status === 'rejected' && foods.status === 'rejected' && cocktails.status === 'rejected') {
+      setOnline({ status: 'error', query, items: [], cocktails: [], dishes: [] })
       return
     }
     setOnline({
       status: 'done',
       query,
+      dishes: dishes.status === 'fulfilled' ? dishes.value : [],
       items: foods.status === 'fulfilled' ? foods.value : [],
       cocktails: cocktails.status === 'fulfilled' ? cocktails.value : [],
     })
@@ -423,6 +426,18 @@ function SearchResults({ q, submitSignal }) {
         </Card>
       )}
 
+      {online.status === 'done' && online.dishes.length > 0 && (
+        <Card>
+          <SectionTitle action={<span className="text-xs text-slate-500">via USDA</span>}>
+            <Icon name="lunch_dining" size={15} className="mr-1.5 text-volt-400" />Whole Dishes
+          </SectionTitle>
+          <p className="text-xs text-slate-500 mb-2">
+            Complete meals as eaten — pick one and log it by the cup or plate, no ingredient math.
+          </p>
+          <FoodList foods={online.dishes} onPick={setDishPick} />
+        </Card>
+      )}
+
       {online.status === 'done' && online.cocktails.length > 0 && (
         <Card>
           <SectionTitle action={<span className="text-xs text-slate-500">via TheCocktailDB</span>}>
@@ -446,8 +461,95 @@ function SearchResults({ q, submitSignal }) {
       </Card>
 
       <AddFoodModal food={pick} onClose={() => setPick(null)} />
+      <DishModal dish={dishPick} onClose={() => setDishPick(null)} />
       <QuickAddModal open={quickAdd} initialName={q.trim()} onClose={() => setQuickAdd(false)} />
     </div>
+  )
+}
+
+// Log a whole USDA dish by household portion — "1 cup of spaghetti with meat
+// sauce" — with the gram math handled from the portion table.
+function DishModal({ dish, onClose }) {
+  if (!dish) return null
+  return <DishForm key={dish.id} dish={dish} onClose={onClose} />
+}
+
+function DishForm({ dish, onClose }) {
+  const { addMeal } = useData()
+  const [slot, setSlot] = useState('Dinner')
+  const [date, setDate] = useState(todayISO())
+  const [qty, setQty] = useState('1')
+  const [portions, setPortions] = useState(null) // null = loading
+  const [pi, setPi] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    fetchUsdaPortions(dish.fdcId)
+      .then((p) => alive && setPortions(p))
+      .catch(() => alive && setPortions([{ label: '100 g', grams: 100 }]))
+    return () => { alive = false }
+  }, [dish.fdcId])
+
+  const qtyNum = parseFloat(qty) || 0
+  const grams = portions ? Math.round(portions[pi].grams * qtyNum) : 0
+  const scale = (n) => Math.round(((n || 0) * grams) / 100)
+
+  return (
+    <Modal open onClose={onClose} title={dish.name}>
+      <div className="space-y-3">
+        <div className="text-sm text-slate-400">USDA whole-dish nutrition · {grams > 0 ? `${grams} g total` : 'loading portions…'}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Portion</label>
+            {portions ? (
+              <select className="input" value={pi} onChange={(e) => setPi(+e.target.value)}>
+                {portions.map((p, i) => <option key={i} value={i}>{p.label}</option>)}
+              </select>
+            ) : (
+              <div className="input text-slate-500">Loading…</div>
+            )}
+          </div>
+          <div>
+            <label className="label">How many</label>
+            <input type="number" step="0.5" min="0" inputMode="decimal" className="input" value={qty} onChange={(e) => setQty(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Meal</label>
+            <select className="input" value={slot} onChange={(e) => setSlot(e.target.value)}>
+              {MEAL_SLOTS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <input type="date" max={todayISO()} className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="card-tight grid grid-cols-4 gap-2 text-center">
+          {[['Cal', scale(dish.calories)], ['P', scale(dish.protein)], ['C', scale(dish.carbs)], ['F', scale(dish.fat)]].map(([k, v]) => (
+            <div key={k}>
+              <div className="text-[10px] uppercase text-slate-500">{k}</div>
+              <div className="font-display font-bold tabular-nums text-white">{v}</div>
+            </div>
+          ))}
+        </div>
+        <button
+          className="btn-primary w-full"
+          disabled={!portions || !(qtyNum > 0)}
+          onClick={() => {
+            addMeal({
+              slot, date, name: dish.name, serving: `${qtyNum} × ${portions[pi].label}`,
+              calories: scale(dish.calories), protein: scale(dish.protein), carbs: scale(dish.carbs),
+              fat: scale(dish.fat), fiber: scale(dish.fiber), sugar: scale(dish.sugar), sodium: scale(dish.sodium),
+            })
+            onClose()
+          }}
+        >
+          Add to {slot}
+        </button>
+      </div>
+    </Modal>
   )
 }
 

@@ -39,6 +39,69 @@ export async function lookupBarcode(code, { signal } = {}) {
   return mapProduct(data.product)
 }
 
+// ---- USDA FoodData Central: whole DISHES, not ingredients -----------------
+// The FNDDS "Survey Foods" dataset is meals as actually eaten — "Spaghetti
+// with meat sauce", "Chicken parmigiana" — with nutrition per 100 g and real
+// household portions ("1 cup"). Free API; DEMO_KEY works with modest limits,
+// a personal key (fdc.nal.usda.gov/api-key-signup) raises them.
+const USDA_API = 'https://api.nal.usda.gov/fdc/v1'
+const USDA_KEY = import.meta.env.VITE_USDA_KEY || 'DEMO_KEY'
+
+const USDA_NUTRIENTS = {
+  208: 'calories', 203: 'protein', 205: 'carbs', 204: 'fat',
+  291: 'fiber', 269: 'sugar', 307: 'sodium',
+}
+
+export async function searchUsdaDishes(query, { signal } = {}) {
+  const params = new URLSearchParams({
+    api_key: USDA_KEY,
+    query,
+    dataType: 'Survey (FNDDS)',
+    pageSize: '10',
+  })
+  const res = await fetch(`${USDA_API}/foods/search?${params}`, { signal })
+  if (!res.ok) throw new Error('Dish search is unavailable right now.')
+  const data = await res.json()
+  return (data.foods || []).map((f) => {
+    const out = {
+      id: `usda-${f.fdcId}`,
+      fdcId: f.fdcId,
+      name: titleCase(f.description),
+      brand: 'USDA dish',
+      serving: '100 g',
+      calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0,
+      cat: 'Dish',
+    }
+    for (const n of f.foodNutrients || []) {
+      const key = USDA_NUTRIENTS[+n.nutrientNumber]
+      if (key) out[key] = Math.round(n.value || 0)
+    }
+    return out
+  }).filter((f) => f.calories > 0)
+}
+
+// Household portions for one dish ("1 cup" → 250 g). One extra request, made
+// only when the user actually taps a dish.
+export async function fetchUsdaPortions(fdcId, { signal } = {}) {
+  const res = await fetch(`${USDA_API}/food/${fdcId}?api_key=${USDA_KEY}`, { signal })
+  if (!res.ok) throw new Error('portions unavailable')
+  const data = await res.json()
+  const portions = (data.foodPortions || [])
+    .filter((p) => p.gramWeight > 0)
+    .slice(0, 6)
+    .map((p) => ({
+      label: (p.portionDescription || p.modifier || `${p.amount ?? 1} portion`).trim(),
+      grams: p.gramWeight,
+    }))
+  portions.push({ label: '100 g', grams: 100 })
+  return portions
+}
+
+function titleCase(s) {
+  const lower = s.toLowerCase()
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
+}
+
 // Normalize an Open Food Facts product into the app's food shape.
 // All values are per 100 g, so the servings multiplier stays meaningful.
 function mapProduct(p) {

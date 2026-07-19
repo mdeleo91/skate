@@ -29,6 +29,9 @@ jobs:
           # APK. Absent, the app runs in local-only demo mode.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Optional: personal USDA FoodData Central key for dish search
+          # (falls back to DEMO_KEY with lower rate limits when unset).
+          VITE_USDA_KEY: ${{ secrets.VITE_USDA_KEY }}
 
       - name: Sync Capacitor
         run: npx cap sync android

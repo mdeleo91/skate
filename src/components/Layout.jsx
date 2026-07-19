@@ -6,7 +6,7 @@ import Icon from './icons'
 const PRIMARY = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/skate', label: 'Skate', icon: 'roller_skating' },
-  { to: '/nutrition', label: 'Nutrition', icon: 'nutrition' },
+  { to: '/nutrition', label: 'Fuel', icon: 'nutrition' },
   { to: '/progress', label: 'Progress', icon: 'monitoring' },
 ]
 
