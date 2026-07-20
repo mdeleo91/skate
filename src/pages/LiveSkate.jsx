@@ -296,7 +296,7 @@ export default function LiveSkate() {
       hrSamples.current.push(bpm)
       setHr(bpm)
       const rough = s.t % 34 < 12
-      roughRms.current = +(rough ? 3.1 + Math.random() * 0.8 : 1.1 + Math.random() * 0.5).toFixed(2)
+      roughRms.current = +(rough ? 7.5 + Math.random() * 2 : 2.5 + Math.random() * 1.5).toFixed(2)
       setSurface(mph >= MOVING_MPH ? (roughRms.current >= ROUGH_RMS ? 'rough' : 'smooth') : null)
       s.heading = (s.heading ?? 0) + Math.sin(s.t / 15) * 0.07 + (Math.random() - 0.5) * 0.03
       const stepM = (mph * 1609.344) / 3600

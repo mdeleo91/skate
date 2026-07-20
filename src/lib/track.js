@@ -27,17 +27,25 @@ export function speedColor(mph, min, max) {
 }
 
 // ---- surface roughness (accelerometer vibration RMS, m/s²) ---------------
-// Above this 1-second RMS, pavement reads as rough chip-seal / bad asphalt.
-export const ROUGH_RMS = 2.2
+// Calibrated against real pocket-carried skate data (2026-07): a stationary
+// phone reads ~0.1–0.3, hand-carried walking ~2.2–2.9, and cruising ~9 mph
+// on pavement that feels dead smooth underfoot reads ~3–5 — hard urethane
+// transmits a lot of vibration even on good asphalt. The original 2.2
+// boundary was set before any on-board data and called all of that rough.
+// Above this per-fix RMS, pavement reads as rough chip-seal / bad asphalt.
+export const ROUGH_RMS = 6.0
+// Below this, it's glass — indoor floors, fresh asphalt at low speed.
+const SMOOTH_FLOOR = 1.5
+// Level 10 saturates here — beyond that it's all just gravel.
+const ROUGH_MAX = 12.0
 
 // 10-degree roughness scale. Levels 1–5 span the smooth range (≤ ROUGH_RMS),
 // 6–10 the rough range, so the binary smooth/rough split sits exactly on the
-// 5/6 boundary and the two views never disagree. Level 10 saturates at
-// 6 m/s² — beyond that it's all just gravel.
+// 5/6 boundary and the two views never disagree.
 export function roughnessLevel(r) {
   if (r == null) return null
-  if (r <= ROUGH_RMS) return Math.max(1, Math.ceil((r - 0.6) / ((ROUGH_RMS - 0.6) / 5)))
-  return Math.min(10, 6 + Math.floor((r - ROUGH_RMS) / ((6.0 - ROUGH_RMS) / 5)))
+  if (r <= ROUGH_RMS) return Math.max(1, Math.ceil((r - SMOOTH_FLOOR) / ((ROUGH_RMS - SMOOTH_FLOOR) / 5)))
+  return Math.min(10, 6 + Math.floor((r - ROUGH_RMS) / ((ROUGH_MAX - ROUGH_RMS) / 5)))
 }
 
 export function levelColor(level) {
@@ -85,7 +93,7 @@ export function cleanRoughness(route) {
     }
     if (nb.length < 3) continue
     const med = nb.sort((a, b) => a - b)[Math.floor(nb.length / 2)]
-    if (v > 3 && v > SPIKE_RATIO * med) out[i] = null
+    if (v > ROUGH_RMS && v > SPIKE_RATIO * med) out[i] = null
   }
 
   return out
