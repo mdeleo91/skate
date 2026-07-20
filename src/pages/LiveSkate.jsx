@@ -396,8 +396,14 @@ export default function LiveSkate() {
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
     const coveragePct = points.length ? Math.round((rs.length / points.length) * 100) : 0
     const finalElapsed = elapsedSec()
+    // Roughness percentiles ride on the finish marker so a single log line
+    // carries the calibration essentials even when the per-fix entries are
+    // lost to ring-buffer wraparound or a truncated share.
+    const sortedRs = [...rs].sort((a, b) => a - b)
+    const q = (f) => (sortedRs.length ? +sortedRs[Math.round(f * (sortedRs.length - 1))].toFixed(2) : undefined)
     dlog('session:finish', {
       miles: +miles.toFixed(2), durationSec: finalElapsed, points: points.length, coveragePct,
+      rMed: q(0.5), rP90: q(0.9), rMax: q(1),
     }, { critical: true })
     // Which trail was this? Preset from "Skate this trail", else match the
     // route against saved trails — and let the trail name the session when

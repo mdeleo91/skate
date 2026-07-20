@@ -99,6 +99,38 @@ export function cleanRoughness(route) {
   return out
 }
 
+// ---- raw roughness review (calibration) -----------------------------------
+// Cleaned per-fix RMS as a time series plus its distribution numbers. This is
+// the calibration view: the scale anchors above are only as good as the data
+// behind them, so the app shows the raw m/s² per ride — match a stretch you
+// remember against what it clocked, and when they disagree, the anchors move.
+export function roughnessProfile(route) {
+  const pts = route || []
+  const rs = cleanRoughness(pts)
+  const t0 = pts.find((p) => p.t != null)?.t
+  if (t0 == null) return null
+  const series = []
+  for (let i = 0; i < pts.length; i++) {
+    if (rs[i] == null || pts[i].t == null) continue
+    const prev = i > 0 ? pts[i - 1] : null
+    const dt = prev?.t != null ? (pts[i].t - prev.t) / 1000 : 0
+    // Speed context per reading — vibration scales with speed, so a number
+    // without the mph behind it can't be judged against how the road felt.
+    const mph = prev && dt > 0 ? mphFromMps(distanceMeters(prev, pts[i]) / dt) : null
+    series.push({ s: Math.round((pts[i].t - t0) / 1000), r: rs[i], mph: mph != null ? +mph.toFixed(1) : null })
+  }
+  if (series.length < 5) return null
+  const sorted = series.map((p) => p.r).sort((a, b) => a - b)
+  const q = (f) => sorted[Math.round(f * (sorted.length - 1))]
+  return {
+    series,
+    durationSec: series[series.length - 1].s,
+    median: +q(0.5).toFixed(2),
+    p90: +q(0.9).toFixed(2),
+    max: +q(1).toFixed(2),
+  }
+}
+
 // Distribution across the 10 roughness levels — pct of sampled trace at each
 // level, plus the average level. Null when there's too little data to mean much.
 export function levelHistogram(route) {

@@ -6,7 +6,7 @@ import Icon from '../components/icons'
 import TrackMap from '../components/TrackMap'
 import { getSkateType } from '../lib/skateTypes'
 import { fmtDuration, fmtPace } from '../lib/calc'
-import { computeSplits, terrainStats, levelHistogram, levelColor } from '../lib/track'
+import { computeSplits, terrainStats, levelHistogram, levelColor, roughnessProfile, roughnessLevel, surfaceColor, ROUGH_RMS } from '../lib/track'
 
 const TABS = ['Overview', 'Splits', 'Map']
 
@@ -182,6 +182,8 @@ export default function SkateDetail() {
                 </div>
               )}
 
+              <RoughnessRaw route={w.route} />
+
               {w.laps?.length > 0 && (
                 <div className="card-tight mt-4">
                   <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Laps</div>
@@ -281,6 +283,90 @@ export default function SkateDetail() {
           <button className="btn-danger" onClick={() => { data.deleteWorkout(w.id); nav('/history') }}>Delete</button>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+// Raw vibration numbers over the ride — the calibration view. The 1-10 scale
+// is an interpretation; this shows what the sensor actually clocked (m/s²)
+// second by second, with the smooth/rough anchor drawn in, so "that stretch
+// felt smooth but reads rough" becomes a concrete, fixable observation.
+const CHART_W = 320
+const CHART_H = 88
+const BUCKETS = 160
+
+function RoughnessRaw({ route }) {
+  const prof = useMemo(() => roughnessProfile(route), [route])
+  if (!prof) return null
+  const { series, durationSec, median, p90, max } = prof
+
+  // Bucket-average onto a fixed grid so a two-hour ride renders as cheaply
+  // as a ten-minute one. Spikes are already filtered upstream.
+  const agg = Array(BUCKETS).fill(null)
+  const dur = Math.max(1, durationSec)
+  for (const p of series) {
+    const b = Math.min(BUCKETS - 1, Math.floor((p.s / dur) * BUCKETS))
+    agg[b] = agg[b] ? { sum: agg[b].sum + p.r, n: agg[b].n + 1 } : { sum: p.r, n: 1 }
+  }
+  // Headroom above the rough line so it reads as a threshold, not a ceiling.
+  const yMax = Math.max(ROUGH_RMS * 1.5, max)
+  const roughY = CHART_H - (ROUGH_RMS / yMax) * CHART_H
+
+  // The handful of roughest single readings, kept ≥20 s apart so one bad
+  // stretch doesn't claim every slot — these are the moments to match against
+  // memory ("the chip-seal on Estelle" / "the driveway at the end").
+  const moments = []
+  for (const p of [...series].sort((a, b) => b.r - a.r)) {
+    if (moments.length >= 3) break
+    if (moments.every((m) => Math.abs(m.s - p.s) > 20)) moments.push(p)
+  }
+  moments.sort((a, b) => a.s - b.s)
+
+  return (
+    <div className="card-tight mt-4">
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Roughness — Raw Numbers</div>
+        <div className="text-xs text-slate-400 tabular-nums">
+          med <span className="text-white font-semibold">{median}</span>
+          {' · '}p90 <span className="text-white font-semibold">{p90}</span>
+          {' · '}peak <span className="text-white font-semibold">{max}</span>
+          <span className="text-slate-500"> m/s²</span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full" style={{ height: CHART_H }} preserveAspectRatio="none">
+        {agg.map((a, i) => {
+          if (!a) return null
+          const r = a.sum / a.n
+          const h = Math.max(1.5, (r / yMax) * CHART_H)
+          return <rect key={i} x={(i / BUCKETS) * CHART_W} y={CHART_H - h} width={CHART_W / BUCKETS} height={h} fill={surfaceColor(r)} />
+        })}
+        <line x1="0" y1={roughY} x2={CHART_W} y2={roughY} stroke="rgba(255,255,255,0.45)" strokeWidth="1" strokeDasharray="4 3" />
+        <text x={CHART_W - 2} y={roughY - 3} textAnchor="end" fill="rgba(255,255,255,0.55)" fontSize="8">
+          rough line · {ROUGH_RMS} m/s²
+        </text>
+      </svg>
+      <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+        <span>start</span>
+        <span>{fmtDuration(durationSec)}</span>
+      </div>
+      {moments.length > 0 && (
+        <div className="mt-2 divide-y divide-white/5">
+          {moments.map((m) => (
+            <div key={m.s} className="flex justify-between py-1.5 text-xs tabular-nums">
+              <span className="text-slate-400">at {fmtDuration(m.s)}</span>
+              <span className="text-slate-200">
+                <span className="font-semibold text-white">{m.r.toFixed(2)}</span> m/s² · level {roughnessLevel(m.r)}
+                {m.mph != null && <span className="text-slate-400"> · {m.mph} mph</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+        What the accelerometer actually clocked, second by second. If a stretch you remember as
+        smooth sits above the rough line — or rough ground reads under it — that's a calibration
+        miss: note the time and the number, and the scale anchors get corrected from real data.
+      </p>
     </div>
   )
 }

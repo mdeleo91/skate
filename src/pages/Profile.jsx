@@ -204,9 +204,15 @@ function DebugLogCard() {
     }
   }
 
+  // Share as a file whenever the platform allows it. Text shares get silently
+  // truncated by receiving apps (a real ride's worth of fix lines is several
+  // hundred KB — one export lost its entire skate to a paste limit); a file
+  // arrives whole or not at all.
   async function share() {
+    const file = new File([exportAll()], `skate-debug-${todayISO()}.log`, { type: 'text/plain' })
     try {
-      await navigator.share({ title: 'Skate debug log', text: exportAll() })
+      if (navigator.canShare?.({ files: [file] })) await navigator.share({ title: 'Skate debug log', files: [file] })
+      else await navigator.share({ title: 'Skate debug log', text: exportAll() })
     } catch { /* user cancelled or unsupported */ }
   }
 
@@ -226,7 +232,8 @@ function DebugLogCard() {
         A diagnostic record of tracking sessions — GPS fixes, vibration readings, button taps,
         crashes and unexpected shutdowns ({count.toLocaleString()} entries) plus every recorded
         skate with its full route data. If a skate ever cuts out or reads wrong, this is how we
-        find out why: copy it and send it in for review.
+        find out why. Share sends it as a file — pasted text gets cut off by most apps and can
+        silently lose whole rides.
       </p>
       <div className="grid grid-cols-3 gap-2 mt-3">
         <button onClick={copy} className="btn-ghost !py-1.5 text-xs">Copy log</button>
