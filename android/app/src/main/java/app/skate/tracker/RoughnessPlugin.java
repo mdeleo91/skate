@@ -47,9 +47,25 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
             sensors = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
         }
         stopSampling();
-        sensor = pick(Sensor.TYPE_LINEAR_ACCELERATION);
-        linear = sensor != null;
-        if (sensor == null) sensor = pick(Sensor.TYPE_ACCELEROMETER);
+        // Wake-up capability trumps sensor quality. The Pixel 7 has no wake-up
+        // variant of the linear-acceleration sensor, so preferring linear left
+        // rides ~85% unsampled — the sensor suspended whenever the screen
+        // slept. A wake-up raw accelerometer keeps flowing pocket-carried all
+        // ride; gravity removal by magnitude is slightly noisier, but data
+        // beats a blind spot.
+        Sensor wakeLinear = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION, true);
+        Sensor wakeRaw = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER, true);
+        if (wakeLinear != null) {
+            sensor = wakeLinear;
+            linear = true;
+        } else if (wakeRaw != null) {
+            sensor = wakeRaw;
+            linear = false;
+        } else {
+            sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+            linear = sensor != null;
+            if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
         if (sensor == null) {
             call.reject("No accelerometer on this device");
             return;
