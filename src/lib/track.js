@@ -34,10 +34,15 @@ export function speedColor(mph, min, max) {
 // boundary was set before any on-board data and called all of that rough.
 // Above this per-fix RMS, pavement reads as rough chip-seal / bad asphalt.
 export const ROUGH_RMS = 6.0
-// Below this, it's glass — indoor floors, fresh asphalt at low speed.
-const SMOOTH_FLOOR = 1.5
-// Level 10 saturates here — beyond that it's all just gravel.
-const ROUGH_MAX = 12.0
+// Below this, it's glass. Anchored to the best full-coverage ride on record
+// (2026-07-25, Pinellas Trail): the smoothest stretches while actually
+// rolling clocked ~0.9–1.6, and those deserve level 1 — the scale's floor
+// should sit at the best pavement we've measured, not below it.
+const SMOOTH_FLOOR = 1.0
+// Level 10 saturates here. The worst pavement ever clocked (~11.8–12.2 on
+// the roughest chip-seal patches) lands at level 9 with this anchor — 10 is
+// reserved for surfaces worse than anything recorded so far (true gravel).
+const ROUGH_MAX = 14.0
 
 // 10-degree roughness scale. Levels 1–5 span the smooth range (≤ ROUGH_RMS),
 // 6–10 the rough range, so the binary smooth/rough split sits exactly on the
