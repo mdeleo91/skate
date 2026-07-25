@@ -7,6 +7,9 @@ import AndroidApp from '../components/AndroidApp'
 import { calorieBudget, macroTargets, bmiLabel, todayISO } from '../lib/calc'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { logEntryCount, exportLogText, clearLog } from '../lib/debugLog'
+import { isNativeApp } from '../lib/geo'
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 export default function Profile() {
   const data = useData()
@@ -216,6 +219,25 @@ function DebugLogCard() {
     } catch { /* user cancelled or unsupported */ }
   }
 
+  // Inside the APK there's no Web Share and the WebView can't download blobs
+  // (tapping Download crashed it), and the clipboard rejects payloads past
+  // ~1 MB — which a multi-ride export easily is. Write the export to the app
+  // cache and hand the file to the Android share sheet instead.
+  async function shareNative() {
+    try {
+      const { uri } = await Filesystem.writeFile({
+        path: `skate-debug-${todayISO()}.log`,
+        data: exportAll(),
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      })
+      await Share.share({ title: 'Skate debug log', files: [uri] })
+    } catch (e) {
+      const msg = String(e?.message ?? e)
+      if (!/cancel/i.test(msg)) note(`Share failed: ${msg.slice(0, 120)}`)
+    }
+  }
+
   function download() {
     const blob = new Blob([exportAll()], { type: 'text/plain' })
     const a = document.createElement('a')
@@ -237,9 +259,11 @@ function DebugLogCard() {
       </p>
       <div className="grid grid-cols-3 gap-2 mt-3">
         <button onClick={copy} className="btn-ghost !py-1.5 text-xs">Copy log</button>
-        {typeof navigator.share === 'function'
-          ? <button onClick={share} className="btn-ghost !py-1.5 text-xs">Share…</button>
-          : <button onClick={download} className="btn-ghost !py-1.5 text-xs">Download</button>}
+        {isNativeApp
+          ? <button onClick={shareNative} className="btn-ghost !py-1.5 text-xs">Share file…</button>
+          : typeof navigator.share === 'function'
+            ? <button onClick={share} className="btn-ghost !py-1.5 text-xs">Share…</button>
+            : <button onClick={download} className="btn-ghost !py-1.5 text-xs">Download</button>}
         <button
           onClick={() => { if (confirm('Clear the debug log?')) { clearLog(); note('Log cleared') } }}
           className="btn-ghost !py-1.5 text-xs !text-ember-400"
