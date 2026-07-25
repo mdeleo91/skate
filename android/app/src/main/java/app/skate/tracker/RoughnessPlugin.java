@@ -7,11 +7,14 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.PowerManager;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import java.util.ArrayDeque;
 
 // Surface-roughness sampling that survives the screen turning off. The web
 // devicemotion event stops the moment the WebView sleeps, which left GPS
@@ -32,6 +35,19 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
     private int count = 0;
     private double pressureSum = 0; // hPa
     private int pressureCount = 0;
+
+    // Timestamped per-second RMS series — the record that survives the screen
+    // sleeping. With the display off the WebView throttles the plugin bridge:
+    // read() promises stop resolving, so the JS side carries its last RMS onto
+    // every GPS fix (real rides came back with one value repeated for 50+
+    // minutes) while the true vibration was lost. Bucketing every sample here,
+    // keyed by wall clock, lets JS backfill the entire ride at save time —
+    // when the screen is on and the bridge works. Guarded by `this`.
+    private static final int SERIES_CAP = 6 * 60 * 60; // six hours of seconds
+    private final ArrayDeque<double[]> series = new ArrayDeque<>(); // {epochMs, sumSq, count}
+    private long bucketStart = 0;
+    private double bucketSumSq = 0;
+    private int bucketCount = 0;
 
     // Prefer the wake-up variant: Pixels (and others) suspend non-wake-up
     // sensors when the screen turns off even while a partial wake lock holds
@@ -82,7 +98,16 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
         lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "skate:roughness");
         // Timed as a leak backstop — released properly when the session ends.
         lock.acquire(6 * 60 * 60 * 1000L);
-        synchronized (this) { sumSq = 0; count = 0; pressureSum = 0; pressureCount = 0; }
+        synchronized (this) {
+            sumSq = 0;
+            count = 0;
+            pressureSum = 0;
+            pressureCount = 0;
+            series.clear();
+            bucketStart = 0;
+            bucketSumSq = 0;
+            bucketCount = 0;
+        }
         JSObject ret = new JSObject();
         ret.put("sensor", sensor.getName());
         ret.put("wakeUp", sensor.isWakeUpSensor());
@@ -137,7 +162,48 @@ public class RoughnessPlugin extends Plugin implements SensorEventListener {
         synchronized (this) {
             // ~50 Hz; the cap only matters if JS stops draining (long pause).
             if (count < 200_000) { sumSq += mag * mag; count++; }
+            long sec = System.currentTimeMillis() / 1000L * 1000L;
+            if (sec != bucketStart) {
+                flushBucket();
+                bucketStart = sec;
+            }
+            bucketSumSq += mag * mag;
+            bucketCount++;
         }
+    }
+
+    // Push the in-progress second onto the series. Caller holds `this`.
+    private void flushBucket() {
+        if (bucketCount > 0) {
+            series.addLast(new double[] { bucketStart, bucketSumSq, bucketCount });
+            while (series.size() > SERIES_CAP) series.removeFirst();
+        }
+        bucketSumSq = 0;
+        bucketCount = 0;
+    }
+
+    // The whole timestamped series since `since` (epoch ms). Called once at
+    // session save, screen on — this is where a ride's roughness truly comes
+    // from; the per-fix read() path is only the live chip and a fallback.
+    @PluginMethod
+    public void readSeries(PluginCall call) {
+        double since = call.getDouble("since", 0.0);
+        JSArray entries = new JSArray();
+        synchronized (this) {
+            flushBucket();
+            bucketStart = 0;
+            for (double[] b : series) {
+                if (b[0] < since) continue;
+                JSObject entry = new JSObject();
+                entry.put("t", (long) b[0]);
+                entry.put("r", Math.round(Math.sqrt(b[1] / b[2]) * 100.0) / 100.0);
+                entry.put("n", (int) b[2]);
+                entries.put(entry);
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("entries", entries);
+        call.resolve(ret);
     }
 
     @Override

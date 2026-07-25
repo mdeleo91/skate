@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { getSkateType } from '../lib/skateTypes'
 import { caloriesForSkate, distanceMeters, milesFromMeters, mphFromMps, fmtDuration, todayISO } from '../lib/calc'
-import { ROUGH_RMS, cleanRoughness } from '../lib/track'
+import { ROUGH_RMS, cleanRoughness, mergeRoughnessSeries } from '../lib/track'
 import { matchRouteToTrails } from '../lib/trailMatch'
 import { isNativeApp, startLocationWatch, Roughness } from '../lib/geo'
 import { dlog } from '../lib/debugLog'
@@ -54,6 +54,7 @@ export default function LiveSkate() {
   const motionSamples = useRef(null)    // samples in the last native read (debug log)
   const motionReadFailed = useRef(false)
   const roughRms = useRef(null)
+  const roughAt = useRef(null)          // when roughRms last refreshed — stale reads aren't pavement
   const motionHandler = useRef(null)
   const wakeLock = useRef(null)
 
@@ -129,6 +130,7 @@ export default function LiveSkate() {
           if (samples > 3 && rms >= 0) {
             if (roughRms.current == null) dlog('motion:live', { samples }, { critical: true })
             roughRms.current = +rms.toFixed(2)
+            roughAt.current = Date.now()
           } else if (roughRms.current != null) {
             // Sensor stalled (screen-off suspend). A gap in the data is the
             // truth; carrying the last value forward painted a frozen fake.
@@ -150,14 +152,18 @@ export default function LiveSkate() {
       return // ignore garbage fixes
     }
     const t = pos.timestamp || Date.now()
-    const p = { lat, lon, t, r: roughRms.current ?? undefined }
+    // A reading only rides on the point while it's fresh. When the screen
+    // sleeps the WebView throttles the bridge and read() stops resolving —
+    // stamping the last value forward painted whole rides one frozen number.
+    const fresh = roughAt.current != null && Date.now() - roughAt.current < 3500
+    const p = { lat, lon, t, r: fresh ? roughRms.current ?? undefined : undefined }
     // One compact entry per fix — accuracy, speed, vibration RMS and how many
     // accelerometer samples fed it. This is the data that shows sensor
     // throttling or a mid-skate death in the debug log.
     dlog('fix', {
       acc: accuracy != null ? Math.round(accuracy) : undefined,
       mph: mps != null ? +mphFromMps(mps).toFixed(1) : undefined,
-      r: roughRms.current ?? undefined,
+      r: p.r,
       n: motionSamples.current ?? undefined,
       // Uncalibrated barometric altitude (m) — for elevation tuning.
       ba: baroAlt.current != null ? +baroAlt.current.toFixed(1) : undefined,
@@ -390,11 +396,28 @@ export default function LiveSkate() {
     setLaps((l) => [...l, { n: l.length + 1, atSec: elapsedSec(), miles: +miles.toFixed(2), avg: +avgSpeed.toFixed(1) }])
   }
 
-  function save() {
+  async function save() {
     const hrs = hrSamples.current
-    const rs = cleanRoughness(points).filter((v) => v != null)
+    let route = points.map((p) => ({ lat: p.lat, lon: p.lon, t: p.t, ...(p.r != null ? { r: p.r } : {}) }))
+    // The ride's real roughness comes from the native timestamped series,
+    // fetched now — screen on, bridge awake — and merged over whatever the
+    // live path managed to stamp. Falls back to the live values on builds
+    // without readSeries or if the call fails.
+    if (Roughness) {
+      try {
+        const since = (startedAt.current ? Date.parse(startedAt.current) : Date.now()) - 5000
+        const { entries } = await Roughness.readSeries({ since })
+        if (entries?.length) {
+          route = mergeRoughnessSeries(route, entries)
+          dlog('motion:series-merged', { entries: entries.length }, { critical: true })
+        }
+      } catch (e) {
+        dlog('motion:series-failed', String(e?.message ?? e).slice(0, 120), { critical: true })
+      }
+    }
+    const rs = cleanRoughness(route).filter((v) => v != null)
     const roughPct = rs.length >= 5 ? Math.round((rs.filter((v) => v >= ROUGH_RMS).length / rs.length) * 100) : null
-    const coveragePct = points.length ? Math.round((rs.length / points.length) * 100) : 0
+    const coveragePct = route.length ? Math.round((rs.length / route.length) * 100) : 0
     const finalElapsed = elapsedSec()
     // Roughness percentiles ride on the finish marker so a single log line
     // carries the calibration essentials even when the per-fix entries are
@@ -433,7 +456,7 @@ export default function LiveSkate() {
       terrain: roughPct != null ? { roughPct, smoothPct: 100 - roughPct, coveragePct } : undefined,
       calories,
       laps,
-      route: points.map((p) => ({ lat: p.lat, lon: p.lon, t: p.t, ...(p.r != null ? { r: p.r } : {}) })),
+      route,
       source: mode,
     })
     nav(`/session/${id}`)

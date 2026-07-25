@@ -99,6 +99,38 @@ export function cleanRoughness(route) {
   return out
 }
 
+// ---- native series merge ---------------------------------------------------
+// Replace live-stamped roughness with the native per-second series at save
+// time. With the screen off the WebView throttles the plugin bridge, so the
+// live path carries a stale RMS onto every fix (one value repeated for the
+// whole pocket stretch); the native plugin keeps recording regardless. Each
+// point gets the RMS of the samples between the previous fix and its own
+// timestamp. A window with no samples means the sensor itself was suspended —
+// the point gets no r at all, an honest gap rather than a stale echo.
+export function mergeRoughnessSeries(route, entries) {
+  if (!route?.length || !entries?.length) return route
+  const sorted = [...entries].sort((a, b) => a.t - b.t)
+  let j = 0
+  return route.map((p, i) => {
+    if (p.t == null) return p
+    // Buckets are stamped at second-start, so one starting just before the
+    // window still mostly covers it — reach back a second.
+    const from = (i > 0 && route[i - 1].t != null ? route[i - 1].t : p.t - 3000) - 1000
+    while (j < sorted.length && sorted[j].t < from) j++
+    let sumSq = 0
+    let n = 0
+    for (let k = j; k < sorted.length && sorted[k].t <= p.t; k++) {
+      sumSq += sorted[k].r * sorted[k].r * sorted[k].n
+      n += sorted[k].n
+    }
+    if (!n) {
+      const { r: _dropped, ...rest } = p
+      return rest
+    }
+    return { ...p, r: +Math.sqrt(sumSq / n).toFixed(2) }
+  })
+}
+
 // ---- raw roughness review (calibration) -----------------------------------
 // Cleaned per-fix RMS as a time series plus its distribution numbers. This is
 // the calibration view: the scale anchors above are only as good as the data
